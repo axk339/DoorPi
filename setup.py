@@ -2,41 +2,36 @@
 
 """DoorPi Setup"""
 
-import pathlib
+from pathlib import Path
+from os.path import basename
 import sys
 
-import setuptools.command.install
+import setuptools
 
-BASE_PATH = pathlib.Path(__file__).resolve().parent
+BASE_PATH = Path(__file__).resolve().parent
+PACKAGE = basename(BASE_PATH)
+PROJECT = PACKAGE.lower()
+PREFIX = sys.prefix
+
 ETC = "/etc" if sys.prefix == "/usr" else "etc"
 
-
-class InstallHook(setuptools.command.install.install):
-    """Hook for ``install`` command that processes template files (*.in)"""
-
-    def run(self):
-        datapath = BASE_PATH / "data"
-        package = self.distribution.metadata.name.lower()
-        substkeys = {
-            "package": package,
-            "project": self.distribution.metadata.name,
-            "prefix": self.prefix,
-            "cfgdir": pathlib.Path(
-                self.prefix if sys.prefix == "/usr" else "", "etc", package
-            ),
-        }
-        for file in datapath.iterdir():
-            if file.suffix != ".in":
-                continue
-            content = file.read_text()
-            for key, val in substkeys.items():
-                content = content.replace(f"!!{key}!!", str(val))
-            file.with_suffix("").write_text(content)
-        super().run()
-
+datapath = BASE_PATH / "data"
+substkeys = {
+    "package": PACKAGE,
+    "project": PROJECT,
+    "prefix": PREFIX,
+    "cfgdir": Path(PREFIX if PREFIX == "/usr" else "", "etc", PACKAGE
+    ),
+}
+for file in datapath.iterdir():
+    if file.suffix != ".in":
+        continue
+    content = file.read_text()
+    for key, val in substkeys.items():
+        content = content.replace(f"!!{key}!!", str(val))
+    file.with_suffix("").write_text(content)
 
 setuptools.setup(
-    cmdclass={"install": InstallHook},
     data_files=[
         # init script and systemd service
         (f"{ETC}/init.d", ["data/doorpi.sh"]),
