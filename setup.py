@@ -6,7 +6,22 @@ from pathlib import Path
 from os.path import basename, join, exists
 from os import chmod, makedirs, geteuid, getegid, execv
 import sys
+import subprocess
 from argparse import ArgumentParser
+
+
+def install_pako():
+    proc_clone = subprocess.Popen(["git", "clone", "https://github.com/MycroftAI/pako"], cwd="/tmp")
+    proc_clone.wait()
+    if proc_clone.returncode != 0:
+        return False
+
+    proc_setup = subprocess.Popen(["python3", "setup.py", "install"], cwd="/tmp/pako")
+    proc_setup.wait()
+    if proc_setup.returncode != 0:
+        return False
+
+    return True
 
 # Check for pip, setuptools and wheel
 try:
@@ -27,6 +42,16 @@ except ImportError as exp:
         else:
             print("install pip failed with error code %s" % e.code)
             sys.exit(e.code)
+
+    # Thus additional system packages are required, install a os independent packet manager (python package)
+    if not install_pako():
+        print("Exiting. Can't install the required packages. Please install python3-pip manually ")
+        sys.exit()
+    from pako import PakoManager
+
+    manager = PakoManager()
+    manager.update()
+    manager.install(['python3-pip'], flags=['no-confirm'])
 
 ap = ArgumentParser()
 ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
