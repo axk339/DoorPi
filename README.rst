@@ -105,7 +105,6 @@ Installation
 
         git clone https://github.com/Wuestengecko/DoorPi.git
         cd DoorPi
-        python setup.py build
         sudo python setup.py install --prefix=/usr/local
 
     Für weitere Informationen siehe `die Installationsanweisungen im
@@ -217,7 +216,6 @@ Installation
 
         git clone https://github.com/Wuestengecko/DoorPi.git
         cd DoorPi
-        python setup.py build
         sudo python setup.py install --prefix=/usr/local
 
     For more information see `the official forum`__.

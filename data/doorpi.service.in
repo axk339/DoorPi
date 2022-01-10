@@ -1,20 +1,18 @@
 [Unit]
-Description=DoorPi
+Description=!!project!!
 Documentation=https://github.com/motom001/DoorPi/wiki
 Requires=doorpi.socket
 After=doorpi.socket
 
 [Service]
 Type=notify
-ExecStart=!!prefix!!/bin/doorpi --configfile !!cfgdir!!/!!package!!.ini
-Environment=HOME=/var/lib/!!package!!
-WorkingDirectory=/var/lib/!!package!!
+ExecStart=!!prefix!!/bin/doorpi --configfile !!cfgfile!!
 Restart=always
 NotifyAccess=main
 WatchdogSec=4s
 
-User=!!package!!
-Group=!!package!!
+User=!!user!!
+Group=!!group!!
 SupplementaryGroups=audio
 SupplementaryGroups=gpio
 SupplementaryGroups=spi
@@ -27,10 +25,10 @@ NoNewPrivileges=true
 
 ProtectSystem=strict
 ProtectHome=true
-RuntimeDirectory=!!package!!
-StateDirectory=!!package!!
-LogsDirectory=!!package!!
-ConfigurationDirectory=!!package!!
+RuntimeDirectory=!!project!!
+StateDirectory=!!project!!
+LogsDirectory=!!project!!
+ConfigurationDirectory=!!cfgdir!!
 
 PrivateTmp=true
 PrivateDevices=false
