@@ -4,20 +4,27 @@
 
 from pathlib import Path
 from os.path import basename, join, exists
-from os import chmod, makedirs, geteuid, getegid, execv
+from os import chmod, makedirs, geteuid, getegid, getenv, setuid, execv
 import sys
 import subprocess
+from shutil import rmtree
 from argparse import ArgumentParser
 
 
-def install_pako():
+def pako_installed():
+    def cleanup():
+        if exists("/tmp/pako"):
+            rmtree("/tmp/pako")
+
     proc_clone = subprocess.Popen(["git", "clone", "https://github.com/MycroftAI/pako"], cwd="/tmp")
     proc_clone.wait()
     if proc_clone.returncode != 0:
+        cleanup()
         return False
 
     proc_setup = subprocess.Popen(["python3", "setup.py", "install"], cwd="/tmp/pako")
     proc_setup.wait()
+    cleanup()
     if proc_setup.returncode != 0:
         return False
 
@@ -30,6 +37,10 @@ try:
     import wheel
 except ImportError as exp:
     print("install missing pip now (%s)" % exp)
+    # change to SUDO_USER for this step
+    if geteuid() == 0:
+        userid = int(getenv("SUDO_UID"))  # id of the user using sudo
+        setuid(userid)
     from get_pip import main as check_for_pip
 
     old_args = sys.argv
@@ -43,15 +54,15 @@ except ImportError as exp:
             print("install pip failed with error code %s" % e.code)
             sys.exit(e.code)
 
-    # Thus additional system packages are required, install a os independent packet manager (python package)
-    if not install_pako():
-        print("Exiting. Can't install the required packages. Please install python3-pip manually ")
-        sys.exit()
-    from pako import PakoManager
+# Thus additional system packages are required, install a os independent packet manager (python package)
+if not pako_installed():
+    print("Exiting. Can't install the required packages. Please install 'python3-pip' manually before installing DoorPi")
+    sys.exit()
 
-    manager = PakoManager()
-    manager.update()
-    manager.install(['python3-pip'], flags=['no-confirm'])
+from pako import PakoManager
+manager = PakoManager()
+manager.update()
+manager.install(['python3-pip'], flags=['no-confirm'])
 
 ap = ArgumentParser()
 ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
