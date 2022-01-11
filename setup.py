@@ -37,10 +37,6 @@ try:
     import wheel
 except ImportError as exp:
     print("install missing pip now (%s)" % exp)
-    # change to SUDO_USER for this step
-    if geteuid() == 0:
-        userid = int(getenv("SUDO_UID"))  # id of the user using sudo
-        setuid(userid)
     from get_pip import main as check_for_pip
 
     old_args = sys.argv
@@ -49,15 +45,15 @@ except ImportError as exp:
         check_for_pip()
     except SystemExit as e:
         if e.code == 0:
+            # Thus additional system packages are required, install a os independent packet manager (python package)
+            if not pako_installed():
+                print('''Exiting. Can't install the required packages. 
+                Please install 'python3-pip' manually before installing DoorPi''')
+                sys.exit()
             execv(sys.executable, [sys.executable] + old_args)
         else:
             print("install pip failed with error code %s" % e.code)
             sys.exit(e.code)
-
-# Thus additional system packages are required, install a os independent packet manager (python package)
-if not pako_installed():
-    print("Exiting. Can't install the required packages. Please install 'python3-pip' manually before installing DoorPi")
-    sys.exit()
 
 from pako import PakoManager
 manager = PakoManager()
