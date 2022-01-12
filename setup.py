@@ -3,12 +3,35 @@
 """DoorPi Setup"""
 
 from pathlib import Path
-from os.path import basename, join, exists
+from os.path import basename, join, exists, expanduser
 from os import chmod, makedirs, geteuid, getegid, execv
 import sys
 import subprocess
+import importlib
 from shutil import rmtree
 from argparse import ArgumentParser
+
+ap = ArgumentParser()
+ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
+ap.add_argument("install", help="build and install the package")
+args = vars(ap.parse_args())
+
+# base path of the cloned git
+BASE_PATH = Path(__file__).resolve().parent
+PACKAGE = basename(BASE_PATH)
+PROJECT = PACKAGE.lower()
+DEFAULT_PREFIX = join(expanduser("~"), ".local", "share")
+
+PREFIX = args["prefix"] or DEFAULT_PREFIX
+if PREFIX in ("/usr", "/usr/local"):
+    WORKING_DIR = join(PREFIX, "etc", PROJECT)
+else:
+    WORKING_DIR = join(PREFIX, PROJECT)
+CONFIG_DIR = join(WORKING_DIR, "conf")
+CONFIG_FILE = join(CONFIG_DIR, f"{PROJECT}.ini")
+LOG_FILE = join("/var", "log", PROJECT, f"{PROJECT}.log")
+LOG_DIR = join("/var", "log", PROJECT)
+# DAEMON_DIR = "/etc/init.d"
 
 
 def pako_installed():
@@ -29,6 +52,7 @@ def pako_installed():
         return False
 
     return True
+
 
 # Check for pip, setuptools and wheel
 try:
@@ -55,28 +79,11 @@ except ImportError as exp:
             print("install pip failed with error code %s" % e.code)
             sys.exit(e.code)
 
-from pako import PakoManager
-manager = PakoManager()
-manager.update()
-manager.install(['python3-pip'], flags=['no-confirm'])
-
-ap = ArgumentParser()
-ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
-ap.add_argument("install", help="build and install the package")
-args = vars(ap.parse_args())
-
-# base path of the cloned git
-BASE_PATH = Path(__file__).resolve().parent
-PACKAGE = basename(BASE_PATH)
-PROJECT = PACKAGE.lower()
-
-PREFIX = args["prefix"] or sys.prefix
-WORKING_DIR = join("/etc", PROJECT) if PREFIX == "/usr" else join(PREFIX, "etc", PROJECT)
-CONFIG_DIR = join(WORKING_DIR, "conf")
-CONFIG_FILE = join(CONFIG_DIR, f"{PROJECT}.ini")
-LOG_FILE = join("/var", "log", PROJECT, f"{PROJECT}.log")
-LOG_DIR = join("/var", "log", PROJECT)
-DAEMON_DIR = "/etc/init.d"
+if importlib.util.find_spec("pako"):
+    from pako import PakoManager
+    manager = PakoManager()
+    manager.update()
+    manager.install(['python3-pip'], flags=['no-confirm'])
 
 datapath = BASE_PATH / "data"
 substkeys = {
@@ -100,10 +107,16 @@ for file in datapath.iterdir():
     # make the resulting file executable
     if file.stem.endswith(".sh"):
         chmod(join(datapath, file.stem), 0o755)
+
 # create relevant folders
-for folder in (CONFIG_DIR, LOG_DIR, WORKING_DIR):
+for folder in (CONFIG_DIR, LOG_DIR):
     if not exists(folder):
         makedirs(folder)
+Path(CONFIG_FILE).touch()
+if PREFIX != DEFAULT_PREFIX:
+    with open(CONFIG_FILE, "w") as f:
+        f.write(f'base_path = "{WORKING_DIR}"')
+
 
 # system.d service used only until there's a need for it
 # (DAEMON_DIR, ["data/doorpi.sh"]),
