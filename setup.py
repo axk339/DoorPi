@@ -4,7 +4,7 @@
 
 from pathlib import Path
 from os.path import basename, join, exists
-from os import chmod, makedirs, geteuid, getegid, getenv, setuid, execv
+from os import chmod, makedirs, geteuid, getegid, execv
 import sys
 import subprocess
 from shutil import rmtree
@@ -108,6 +108,13 @@ for folder in (CONFIG_DIR, LOG_DIR, WORKING_DIR):
 # system.d service used only until there's a need for it
 # (DAEMON_DIR, ["data/doorpi.sh"]),
 setuptools.setup(
+    package_data={
+        # include
+        '': ['*.yml', '*.cfg', '*.txt', '*.toml', '*.py', '*.rst', '*.wav', '*.ico', '*.md', '*.json', '*.html', '*.js',
+             '*.css', '*.png', '*.tab', '*.sh', '*.gif', '*.jpg', '*.coffee', '*.less', '*.psd', '*.swf', '*.svg',
+             '*.otf', '*.eot', '*.woff', '*.ttf', '*.scss', '*.db', '*.map', '*.lang', '*.xml', '*.pack', '*.idx',
+             '*.sample'],
+    },
     data_files=[
         # systemd service
         (join(PREFIX, "lib/systemd/system"), ["data/doorpi.service", "data/doorpi.socket"]),
