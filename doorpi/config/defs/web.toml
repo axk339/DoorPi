@@ -39,6 +39,11 @@ _description = "Root directory of the static web resources"
 _type = "path"
 _default = "../DoorPiWeb"
 
+[config.web.indexpage]
+_description = "Path to index.html of the static web resources"
+_type = "path"
+_default = "/dashboard/pages/index.html"
+
 [config.web.areas.public]
 _description = "Regular expressions matching URLs in the public area"
 _type = "list"

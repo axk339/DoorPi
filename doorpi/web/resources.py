@@ -41,10 +41,13 @@ def setup(app: aiohttp.web.Application) -> None:
     )
 
 
-@routes.get("/{path:.+}")
+@routes.get("/{path:$|.+}")
 async def _resource(
     request: aiohttp.web.Request,
 ) -> aiohttp.web.StreamResponse:
+    if request.path == "/":
+        cfg = doorpi.INSTANCE.config.view("web")
+        request = request.clone(rel_url=str(cfg["indexpage"]))
     path = pathlib.PurePosixPath(request.path)
     if path.suffix in parsable_file_extensions:
         return await _resource_template(request)

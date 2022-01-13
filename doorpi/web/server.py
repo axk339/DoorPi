@@ -45,6 +45,11 @@ async def run() -> None:
                 socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM),
             ).start()
     else:
+        _ip = cfg["ip"]
+        if _ip in ("0.0.0.0", "127.0.0.1"):
+            _ip = socket.gethostbyname(socket.gethostname())
+        logger.info(
+            f"webserver exposed at {_ip}:{cfg['port']}")
         await aiohttp.web.TCPSite(runner, cfg["ip"], cfg["port"]).start()
 
     eh = doorpi.INSTANCE.event_handler
