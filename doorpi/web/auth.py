@@ -5,7 +5,6 @@ import re
 import typing as T
 
 import aiohttp.web
-import pytz
 
 import doorpi
 
@@ -169,7 +168,7 @@ def create_session(username: str, request: aiohttp.web.Request) -> Session:
         username,
         usergroups,
         request.remote,
-        datetime.datetime.now(pytz.UTC),
+        datetime.datetime.now(tz=datetime.timezone.utc),
         readable,
         writable,
     )

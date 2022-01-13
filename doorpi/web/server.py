@@ -8,7 +8,7 @@ import typing as T
 import aiohttp.web
 
 import doorpi.metadata
-import doorpi.util
+# import doorpi.util
 import doorpi.web.api
 import doorpi.web.auth
 import doorpi.web.resources
