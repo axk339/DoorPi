@@ -10,6 +10,26 @@ Relative paths in the configuration will be interpreted from here"""
 _type = "path"
 _default = "~/.local/share/doorpi"
 
+[config.mycroft.hivename]
+_description = """The name of the node known by HiveMind (Mycroft)"""
+_type = "string"
+_default = ""
+
+[config.mycroft.access_key]
+_description = """The access key connecting to HiveMind (Mycroft)"""
+_type = "string"
+_default = ""
+
+[config.mycroft.crypto_key]
+_description = """HiveMind (Mycroft) encrypts (AES) the messages if a 16(!)-character-string is given"""
+_type = "string"
+_default = ""
+
+[config.mycroft.host]
+_description = """HiveMind (Mycroft) host (<ip>:<port>)"""
+_type = "string"
+_default = ""
+
 [config.eventlog]
 _description = "Path to the event log database"
 _type = "path"
