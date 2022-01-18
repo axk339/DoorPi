@@ -22,6 +22,13 @@ class MycroftConnect(object):
             cls._instance = cls.__new__(cls)
             cls.bus = None
             cls.connected = False
+
+            conf = doorpi.INSTANCE.config.view("mycroft")
+            cls.name = conf["hivename"]
+            cls.__access_key = conf["access_key"]
+            cls.__crypto_key = conf["crypto_key"]
+            cls.host = conf["host"]
+
         return cls._instance
 
     def connecting(self, node):
@@ -53,13 +60,6 @@ class MycroftConnect(object):
         return received
 
     def discover_hivemind(self):
-        conf = doorpi.INSTANCE.config.view("mycroft")
-        __name = conf.get("hivename", None)
-        __access_key = conf.get("access_key", None)
-        __crypto_key = conf.get("crypto_key", None)
-        self.host = conf.get("host", None)
-        if self.__name is None or self.__access_key is None:
-            LOGGER.error("Cannot spin up Mycroft connection, credentials are missing")
 
         discovery = LocalDiscovery()
         discovery.on_new_node = self.connecting
