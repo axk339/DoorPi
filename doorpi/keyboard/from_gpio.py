@@ -6,6 +6,7 @@ import RPi.GPIO as gpio  # pylint: disable=import-error
 from doorpi import keyboard
 
 from .abc import AbstractKeyboard
+from .enums import GPIOPull
 
 LOGGER = logging.getLogger(__name__)
 INSTANTIATED = False
@@ -26,17 +27,18 @@ class GPIOKeyboard(AbstractKeyboard):
         gpio.setmode((gpio.BOARD, gpio.BCM)[self.config["mode"].value - 1])
 
         pull = self.config["pull_up_down"]
-        if pull is keyboard.PullUpDown.OFF:  # type: ignore[attr-defined]
+        if pull is GPIOPull.OFF:  # type: ignore[attr-defined]
             pull = gpio.PUD_OFF
-        elif pull is keyboard.PullUpDown.UP:  # type: ignore[attr-defined]
+        elif pull is GPIOPull.UP:  # type: ignore[attr-defined]
             pull = gpio.PUD_UP
-        elif pull is keyboard.PullUpDown.DOWN:  # type: ignore[attr-defined]
+        elif pull is GPIOPull.DOWN:  # type: ignore[attr-defined]
             pull = gpio.PUD_DOWN
         else:
             raise ValueError(f"{self.name}: Invalid pull_up_down value")
 
-        gpio.setup(self._inputs, gpio.IN, pull_up_down=pull)
-        for input_pin in self._inputs:
+        input_pins = [int(i) for i in self._inputs if i.isdigit()]  # type: list[int]
+        gpio.setup(input_pins, gpio.IN, pull_up_down=pull)
+        for input_pin in input_pins:
             gpio.add_event_detect(
                 input_pin,
                 gpio.BOTH,
@@ -46,9 +48,9 @@ class GPIOKeyboard(AbstractKeyboard):
                     + self._bouncetime.seconds
                 ),
             )
-
-        gpio.setup(self._outputs.keys(), gpio.OUT)
-        for output_pin in self._outputs:
+        output_pins = [int(i) for i in self._outputs.keys() if i.isdigit()]  # type: list[int]
+        gpio.setup(output_pins, gpio.OUT)
+        for output_pin in output_pins:
             self.output(output_pin, False)
 
     def destroy(self) -> None:
