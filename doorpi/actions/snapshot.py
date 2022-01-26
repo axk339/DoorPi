@@ -115,7 +115,7 @@ class StreamSnapshotAction(SnapshotAction):
         try:
             (
             ffmpeg
-                .input(self.__url.get_url())
+                .input(self.__url.geturl())
                 .filter('scale', self.width or -1, -1)
                 .output(__outfile, vframes=1)
                 .overwrite_output()
