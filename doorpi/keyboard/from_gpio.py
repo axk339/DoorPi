@@ -36,9 +36,9 @@ class GPIOKeyboard(AbstractKeyboard):
         else:
             raise ValueError(f"{self.name}: Invalid pull_up_down value")
 
-        input_pins = [int(i) for i in self._inputs if i.isdigit()]  # type: list[int]
-        gpio.setup(input_pins, gpio.IN, pull_up_down=pull)
-        for input_pin in input_pins:
+        self._inputs = [int(i) for i in self._inputs if i.isdigit()]  # type: list[int]
+        gpio.setup(self._inputs, gpio.IN, pull_up_down=pull)
+        for input_pin in self._inputs:
             gpio.add_event_detect(
                 input_pin,
                 gpio.BOTH,
