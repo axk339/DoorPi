@@ -16,6 +16,8 @@ ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
 ap.add_argument("install", help="build and install the package")
 args = vars(ap.parse_args())
 
+SYSTEM_REQUIREMENTS = ["python3-pip", "ffmpeg"]
+
 # base path of the cloned git
 BASE_PATH = Path(__file__).resolve().parent
 PACKAGE = basename(BASE_PATH)
@@ -71,8 +73,9 @@ except ImportError as exp:
         if e.code == 0:
             # Thus additional system packages are required, install a os independent packet manager (python package)
             if not pako_installed():
-                print('''Exiting. Can't install the required packages. 
-                Please install 'python3-pip' manually before installing DoorPi''')
+                print(f'''Exiting. Can't install the required packages. 
+                System Requirements: {SYSTEM_REQUIREMENTS} 
+                Please install above packages manually before installing DoorPi''')
                 sys.exit()
             execv(sys.executable, [sys.executable] + old_args)
         else:
@@ -83,7 +86,7 @@ if importlib.util.find_spec("pako"):
     from pako import PakoManager
     manager = PakoManager()
     manager.update()
-    manager.install(['python3-pip'], flags=['no-confirm'])
+    manager.install(SYSTEM_REQUIREMENTS, flags=['no-confirm'])
 
 datapath = BASE_PATH / "data"
 substkeys = {
