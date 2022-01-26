@@ -10,10 +10,5 @@ _min = 1
 
 [config.snapshots.width]
 _description = "Desired horizontal snapshot resolution"
-_default = 1280
-_min = 1
-
-[config.snapshots.height]
-_description = "Desired vertical snapshot resolution"
-_default = 720
-_min = 1
+_default = 0
+_min = 0

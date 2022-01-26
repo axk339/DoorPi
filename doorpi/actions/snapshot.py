@@ -1,9 +1,11 @@
 """Actions related to taking snapshots: snap_url, snap_picam"""
 # pylint: disable=import-outside-toplevel
 
+import sys
 import datetime
 import logging
 import pathlib
+from urllib.parse import urlparse
 from typing import Any, List, Mapping
 
 import doorpi
@@ -47,6 +49,13 @@ class SnapshotAction(Action):
         path.mkdir(parents=True, exist_ok=True)
         return path
 
+    @staticmethod
+    def get_resolution() -> str:
+        """Fetches the snapshot resolution from the configuration."""
+
+        width = doorpi.INSTANCE.config["snapshots.width"]
+        return width or None
+
     @classmethod
     def get_next_path(cls) -> pathlib.Path:
         """Computes the next snapshot's path."""
@@ -87,6 +96,43 @@ class URLSnapshotAction(SnapshotAction):
 
     def __repr__(self) -> str:
         return f"snap_url:{self.__url}"
+
+
+class StreamSnapshotAction(SnapshotAction):
+    """Converts a snapshot from a webcam stream (that has not yet an API for it) and saves it."""
+
+    def __init__(self, url: str, width: str = None) -> None:
+
+        super().__init__()
+
+        self.__url = urlparse(url)
+        self.width = width or self.get_resolution()
+
+    def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
+        import ffmpeg
+
+        __outfile = str(self.get_next_path())
+        try:
+            (
+            ffmpeg
+                .input(self.__url.get_url())
+                .filter('scale', self.width or -1, -1)
+                .output(__outfile, vframes=1)
+                .overwrite_output()
+                .run(capture_stdout=True, capture_stderr=True)
+            )
+        except ffmpeg.Error as e:
+            LOGGER.error(f"Can't make a snapshot: {e.stderr.decode()}")
+        else:
+            LOGGER.info(f"Snapshot saved at: {__outfile}")
+
+        self.cleanup()
+
+    def __str__(self) -> str:
+        return f"Save the image from {self.__url} as snapshot"
+
+    def __repr__(self) -> str:
+        return f"snap_stream:{self.__url}"
 
 
 class PicamSnapshotAction(SnapshotAction):
