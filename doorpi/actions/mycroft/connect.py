@@ -50,7 +50,9 @@ class MycroftConnect(object):
         else:
             mtype = mtype.lower()
 
-        payload = Message(mtype, data={'utterance': text})
+        payload = Message(mtype,
+                          data={'utterance': text},
+                          context=self.create_context(htype, mtype, text))
         message = HiveMessage(htype, payload)
 
         received = None
@@ -58,6 +60,13 @@ class MycroftConnect(object):
             received = self.bus.wait_for_response(message)
 
         return received
+
+    def create_context(self, htype, mtype, text):
+        _ctxt = {}
+        if mtype == "speak":
+            _ctxt["destination"] = "audio"
+        else:
+            _ctxt["destination"] = "skills"
 
     def discover_hivemind(self):
 
