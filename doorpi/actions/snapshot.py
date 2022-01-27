@@ -39,13 +39,16 @@ class SnapshotAction(Action):
                 LOGGER.exception("Could not clean up snapshot %s", fi.name)
 
     @staticmethod
-    def get_base_path() -> pathlib.Path:
+    #def get_base_path() -> pathlib.Path:
+    def get_full_path() -> pathlib.Path:
         """Fetches the snapshot directory path from the configuration."""
 
         path = doorpi.INSTANCE.config["snapshots.directory"]
         if not path:
             raise ValueError("snapshot_path must not be empty")
         path = pathlib.Path(path)
+        if not str(path.parent).startswith("/"):
+            path = pathlib.Path(doorpi.INSTANCE.base_path, path)
         path.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -60,7 +63,7 @@ class SnapshotAction(Action):
     def get_next_path(cls) -> pathlib.Path:
         """Computes the next snapshot's path."""
 
-        path = cls.get_base_path() / datetime.datetime.now().strftime(
+        path = cls.get_full_path() / datetime.datetime.now().strftime(
             "%Y-%m-%d %H:%M:%S.jpg"
         )
         return path
@@ -68,7 +71,7 @@ class SnapshotAction(Action):
     @classmethod
     def list_all(cls) -> List[pathlib.Path]:
         """Lists all snapshot files in the snapshot directory."""
-        return sorted(f for f in cls.get_base_path().iterdir() if f.is_file())
+        return sorted(f for f in cls.get_full_path().iterdir() if f.is_file())
 
 
 class URLSnapshotAction(SnapshotAction):

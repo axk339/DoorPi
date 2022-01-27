@@ -11,7 +11,7 @@ import pathlib
 import signal
 import sys
 import time
-from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Sequence, List
 
 import doorpi
 import doorpi.actions.snapshot
@@ -86,6 +86,13 @@ class DoorPi:
                 self._base_path = pathlib.Path.home() / name.lower()
             LOGGER.info("Auto-selected BasePath %s", self._base_path)
         return self._base_path
+
+    @property
+    def paths(self) -> List[pathlib.Path]:
+        snapshot_path = doorpi.INSTANCE.config["snapshots.directory"]
+        if not str(snapshot_path).startswith("/"):
+            snapshot_path = pathlib.PurePath(self.base_path, snapshot_path)
+        return [self.base_path, snapshot_path]
 
     def __init__(self, args: argparse.Namespace) -> None:
         if not TYPE_CHECKING and doorpi.INSTANCE is not None:
