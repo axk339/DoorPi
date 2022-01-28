@@ -68,6 +68,8 @@ class MycroftConnect(object):
         else:
             _ctxt["destination"] = "skills"
 
+        return _ctxt
+
     def discover_hivemind(self):
 
         discovery = LocalDiscovery()
