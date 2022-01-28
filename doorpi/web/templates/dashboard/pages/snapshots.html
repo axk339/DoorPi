@@ -1,7 +1,8 @@
 {% extends "/dashboard/parts/base.html" %}
 {% block content %}
 			<div class="panel-heading">
-				<h1 class="page-header">History - Snapshots</h1>
+				<h1 class="page-header">Snapshots</h1>
+				<h3 class="page-header" id="snapshot_date"></h3>
 			</div>
 			<div class="panel-body">
 				<img class="img-responsive" id="snapshot" src='' alt='' />
@@ -45,8 +46,11 @@
 								default:
 									current = 0
 								}
-								document.getElementById("snapshot").src = files[current]
-								document.getElementById("snapshot").alt = files[current]
+								var file = files[current];
+								var rx = file.match(/\/(.+\/)*(.+)\.(jpe?g|png|gif|bmp)/);
+								document.getElementById("snapshot_date").textContent = rx[2];
+								document.getElementById("snapshot").src = file;
+								document.getElementById("snapshot").alt = file;
 							}
 						}
 			</script>
