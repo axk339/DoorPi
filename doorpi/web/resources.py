@@ -48,15 +48,13 @@ def setup(app: aiohttp.web.Application) -> None:
 async def _resource(
     request: aiohttp.web.Request,
 ) -> aiohttp.web.StreamResponse:
-    custom_paths = {doorpi.INSTANCE.config["snapshots.directory"],
-                    doorpi.INSTANCE.config["base_path"]}
 
     if request.path == "/":
         cfg = doorpi.INSTANCE.config.view("web")
         request = request.clone(rel_url=str(cfg["indexpage"]))
     path = PurePosixPath(unquote(request.path))
     # is this a resource on a custom path? (ie screenshots,...)
-    if normpath(path.parent) in [normpath(x) for x in custom_paths]:
+    if normpath(path.parent) in [normpath(x) for x in doorpi.INSTANCE.paths]:
         return await _custom_path_resource(path)
     elif path.suffix in parsable_file_extensions:
         return await _resource_template(request)
@@ -89,6 +87,6 @@ async def _resource_template(
 async def _custom_path_resource(path: Union[str, PurePosixPath]) -> aiohttp.web.FileResponse:
     # this is a relative path (based on base_path)
     if not str(path.parent).startswith("/"):
-        path = PurePath(doorpi.INSTANCE.config["base_path"], path)
+        path = PurePath(doorpi.INSTANCE.base_path, path)
 
     return aiohttp.web.FileResponse(str(path))
