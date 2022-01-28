@@ -2,6 +2,8 @@ import json
 import logging
 import pathlib
 import sqlite3
+from datetime import datetime
+from dateutil.tz import tzlocal
 from typing import Any, Mapping, Optional, Tuple, TypedDict
 
 LOGGER = logging.getLogger(__name__)
@@ -126,7 +128,7 @@ class EventLog:
                         "event_id": row[0],
                         "fired_by": row[1],
                         "event_name": row[2],
-                        "start_time": row[3],
+                        "start_time": str(datetime.fromtimestamp(row[3]).replace(tzinfo=tzlocal())),
                         "additional_infos": row[4],
                     }
                 )
