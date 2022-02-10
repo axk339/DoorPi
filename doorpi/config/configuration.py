@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import collections.abc
 import contextlib
+import pathlib
 import itertools
 import logging
+import enum
 import os
+import re
+import dpath.util
 from importlib import resources
 from typing import (
     Any,
@@ -68,7 +72,7 @@ class Configuration:
         else:
             ctx = contextlib.nullcontext(path)
         with ctx as file:
-            toml.dump(self.__values, file)
+            toml.dump(self.__values, file, encoder=CustomTomlEncoder())
 
     def attach_defs(self, defs: Mapping[str, Any]) -> None:
         """Attach a dictionary of key definitions to this configuration"""
@@ -123,6 +127,43 @@ class Configuration:
         if not set(source) & flagkeys:
             raise KeyError(f"Key path too short: {key}")
         return source, wildsegments
+
+    @property
+    def keypaths(self):
+        """ returns the combined keypaths (definitions and values) available """
+
+        __combined = list(set(_keypaths(self.__defs) + _keypaths(self.__values)))
+        __combined.sort()
+        # separate wildcard entries (to sort em correctly)
+        __wildcards = list(filter(lambda item: "*" in item, __combined))
+        __combined = list(filter(lambda item: item not in __wildcards, __combined))
+
+        for wc in __wildcards:
+            __wc = wc.split(".")
+            for pos, item in enumerate(__combined):
+                __item = item.split(".")
+                if __wc[0] != __item[0]:
+                    continue
+                if keymatch(wc, item):
+                    __combined.insert(pos, wc)
+                    break
+
+        # readd unused
+        for wc in __wildcards:
+            if wc not in __combined:
+                __combined.append(wc)
+
+        return __combined
+
+    def get_definition(self, keypath):
+        if not dpath.util.search(self.__defs, keypath, separator="."):
+            segment = {"_type": "", "_description": "", "_default": ""}
+        else:
+            keypath = _splitkey(keypath)
+            segment = self.__defs
+            for key in keypath:
+                segment = segment[key]
+        return segment
 
     def __getitem__(self, key: Union[str, Sequence[str]]) -> Any:
         keypath = _splitkey(key)
@@ -244,8 +285,52 @@ class ConfigView(collections.abc.Mapping):
 
 
 def _splitkey(key: Union[str, Sequence[str]]) -> List[str]:
+    """ Takes in a keypath and returns a splitted list"""
     if isinstance(key, str):
         key = key.split(".")
     elif not isinstance(key, list):
         key = list(key)
     return key
+
+
+def _keypaths(d):
+    """ Takes in a config dict and returns the keypaths"""
+    def iterdict(d, path):
+        paths = []
+        for k, v in d.items():
+            if isinstance(v, dict):
+                paths += iterdict(v, path + [k])
+            else:
+                #TODO get the test version!
+                # to serve both self.__values and self.__defs
+                if k not in ("_default", "_type", "_description", "_enumcls", "_min", "_max", "_membertype",):
+                    path.append(k)
+                _path = '.'.join(path)
+                if _path not in paths:
+                    paths.append(_path)
+        return paths
+
+    return iterdict(d, [])
+
+
+def keymatch(pat, against):
+    """ Matches a wildcard keypath against a defined one
+    i.e. keyboard.*.input.* against keyboard.<some_name>.input.<some_pin> """
+
+    regex = re.sub(re.compile(r'\*', re.I), r'\\w*', pat)
+    return re.match(regex, against) is not None
+
+class CustomTomlEncoder(toml.TomlEncoder):
+    def __init__(self):
+        super().__init__()
+        self.dump_funcs.update({pathlib.PosixPath: lambda v: f'"{str(v)}"'})
+
+    # monkeypatch
+    def dump_value(self, v):
+        dump_fn = self.dump_funcs.get(type(v))
+        if dump_fn is None:
+            if isinstance(v, enum.Enum):
+                dump_fn = lambda v: f'"{v.name}"'
+            elif hasattr(v, '__iter__'):
+                dump_fn = self.dump_funcs[list]
+        return dump_fn(v) if dump_fn is not None else self.dump_funcs[str](v)

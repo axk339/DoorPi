@@ -5,10 +5,12 @@ _default = "snapshots"
 
 [config.snapshots.keep]
 _description = "Maximum number of snapshots to keep"
+_type = "int"
 _default = 10
 _min = 1
 
 [config.snapshots.width]
-_description = "Desired horizontal snapshot resolution"
+_description = "Desired horizontal snapshot resolution. Height will be scaled to match the format"
+_type = "int"
 _default = 0
 _min = 0

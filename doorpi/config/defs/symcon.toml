@@ -1,8 +1,14 @@
 [config.ip_symcon.server]
+_description = "Symcom Server IP address and port"
 _type = "string"
+_default = ""
 
 [config.ip_symcon.username]
+_description = "Symcom login name"
 _type = "string"
+_default = ""
 
 [config.ip_symcon.password]
+_description = "Symcom login password"
 _type = "password"
+_default = ""

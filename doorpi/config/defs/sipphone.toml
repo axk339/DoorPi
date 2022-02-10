@@ -20,36 +20,36 @@ _default = "dummy"
 _description = "The list of administrative numbers"
 _type = "list"
 _membertype = "string"
+_default = []
 
 [config.sipphone.ringtime]
 _description = "Time to wait while dialling before giving up (seconds)"
+_type = "int"
 _default = 30
 _min = 5
 
 [config.sipphone.calltime]
-_description = """Maximum time a call can take after picking up (seconds)
-
-Set to 0 to disable the limitation."""
+_description = "Maximum time a call can take after picking up (seconds), 0 = disable"
+_type = "int"
 _default = 120
 _min = 0
 
 [config.sipphone.max_calls]
-_description = """Maximum number of simultaneous calls to handle, \
-  if supported by the library"""
+_description = "Maximum number of simultaneous calls to handle, if supported by the library"
+_type = "int"
 _default = 8
 _min = 1
 
 [config.sipphone.codecs]
-_description = """Audio codecs to use, in order of preference
-
-Set this to an empty list to use the library defaults."""
+_description = "Audio codecs to use, in order of preference; empty list = library defaults."
 _type = "list"
 _membertype = "string"
 _default = ["opus", "PCMA", "PCMU"]
 
 [config.sipphone.server.server]
-_description = "The SIP server to register with"
+_description = "The SIP server '<IP>' to register with"
 _type = "string"
+_default = ""
 
 [config.sipphone.server.username]
 _description = "DoorPi's username at the SIP server"
@@ -59,15 +59,16 @@ _default = "doorpi"
 [config.sipphone.server.password]
 _description = "DoorPi's SIP server password"
 _type = "password"
+_default = ""
 
 [config.sipphone.server.realm]
 _description = "SIP server authentication realm"
+_type = "string"
 _default = ""
 
 [config.sipphone.server.localport]
-_description = """The local SIP port to use
-
-Set to 0 to automatically choose one (recommended)."""
+_description = "The local SIP port to use; 0 = auto (recommended)."
+_type = "int"
 _default = 0
 _min = 0
 _max = 65535
@@ -79,54 +80,63 @@ _default = ""
 
 [config.sipphone.server.identity]
 _description = "The name to show on called phones"
+_type = "string"
 _default = "DoorPi"
 
 [config.sipphone.capture.device]
 _description = "The capture device for phone calls"
 _type = "string"
+_default = ""
 
 [config.sipphone.capture.volume]
 _description = "Volume of the capture device. -1 means don't change it."
+_type = "int"
 _default = 100
 _min = -1
 _max = 100
 
 [config.sipphone.capture.loudness]
 _description = "Loudness multiplier for in-call voice recording"
+_type = "float"
 _default = 1.0
 _min = 0.0
 
 [config.sipphone.playback.device]
 _description = "The playback device for phone calls"
+_default = ""
 _type = "string"
 
 [config.sipphone.playback.volume]
 _description = "Volume of the playback device. -1 means don't change it."
+_type = "int"
 _default = 100
 _min = 0
 _max = 100
 
 [config.sipphone.playback.loudness]
 _description = "Loudness multiplier for the in-call voice playback"
+_type = "float"
 _default = 1.0
 _min = 0.0
 
 [config.sipphone.dialtone.file]
-_description = """Sound file to play while dialling
-
-Leave unset to use the builtin dialtone."""
+_description = "Sound file to play while dialling. unset = use builtin dialtone."
 _type = "path"
+_default = ""
 
 [config.sipphone.dialtone.loop]
 _description = "Loop the dialtone while calling"
+_type = "bool"
 _default = true
 
 [config.sipphone.dialtone.loudness]
 _description = "Loudness multiplier for the dial tone"
+_type = "float"
 _default = 1.0
 
 [config.sipphone.recording.enabled]
 _description = "Record calls"
+_type = "bool"
 _default = false
 
 [config.sipphone.recording.path]
@@ -136,31 +146,33 @@ _default = "recordings"
 
 [config.sipphone.recording.keep]
 _description = "Number of old recordings to keep"
+_type = "int"
 _default = 10
 _min = 1
 
 [config.sipphone.recording.dial]
 _description = "Record while dialling"
+_type = "bool"
 _default = true
 
 [config.sipphone.echo_cancellation.enabled]
-_description = """Enable echo cancellation
-
-If the hardware supports it, hardware EC is used, otherwise it will be
-done in software.  Since software EC can be too much for small systems
-and not all hardware support it, it is disabled by default."""
+_description = "Enable echo cancellation"
+_type = "bool"
 _default = false
 
 [config.sipphone.echo_cancellation.tail]
 _description = "Echo cancellation tail length (ms)"
+_type = "int"
 _default = 250
 
 [config.sipphone.video.enabled]
 _description = "Send a video stream along with the audio call"
+_type = "bool"
 _default = false
 
 [config.sipphone.video.device]
 _description = "The video device to use"
+_type = "string"
 _default = ""
 
 [config.sipphone.video.resolution]
@@ -171,9 +183,11 @@ _default = "vga"
 
 [config.sipphone.video.codec]
 _description = "Video stream encoding to use"
+_type = "string"
 _default = "vp8"
 
 [config.sipphone.dtmf."*"]
 _description = "Actions to execute when receiving DTMF sequence {0}"
 _type = "list"
 _membertype = "string"
+_default = []

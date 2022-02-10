@@ -1,0 +1,70 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="/dashboard/dist/css/sb-admin-2.css" />
+    </head>
+    <body>
+        <div class="desc-body">
+                <p class="desc-heading">Schema</p>
+                <p><span class="definition">event = action</span><span> bzw.</span></p>
+                <p><span class="definition">event = [action1, action2]</span><span> bei mehreren Aktionen</p>
+                <p>in Kombination mit Keyboards erweitert sich das Schema:</p>
+                <p><span class="definition">keyboardevent_pin = action</span><span> pin ist hier nur als Platzhalter der Inputmöglichkeiten des Keyboards zu sehen</p>
+                <p><span class="definition">keyboardevent_pin_keyboard = action</span><span> bei mehreren keyboards</p>
+                <br>
+
+                <p class="desc-heading">Konfigurationsbeispiele</p>
+                <p class="bold">[Events]</p>
+                <p><span class="bold">OnStartup = "os_execute:aplay /home/ubuntu/bleep_01.wav"</span><span class="hv">  # Öffnet (os_execute) die Systemdatei bleep_01.wav während der Initialisierung Doorpis'</span></p>
+                <p><span class="bold">OnKeyDown_27 = "os_execute:aplay /home/ubuntu/bleep_01.wav"</span><span class="hv">  # Spielt bleep_01.wav bei dem Aktivieren von GPIO Pin 27</span></p>
+                <p><span class="bold">OnKeyDown_27 = ["call:**613#614", "snap_picam"]</span><span class="hv">  # wählt eine definierte SIP Adresse und macht ein Snapshot von der Pi Kamera</span></p>
+            <br><p>Mehr zu Aktionen hier</p>
+            <br>
+
+            <p class="desc-heading">Eventliste</p>
+            <dl>
+                <p class="dl-300">(web)</p>
+                <dt class="dl-mirrored dl-300">OnWebServerStart</dt> <dd class="dl-300 hv">Der Webserver ist gestartet</dd>
+                <dt class="dl-mirrored dl-300">OnWebServerStop</dt> <dd class="dl-300 hv">Der Webserver hat gestoppt</dd>
+                <dt class="dl-mirrored dl-300">WebServerAuthUnknownUser</dt> <dd class="dl-300 hv">Ein Benutzer hat versucht mit einem falschen Usernamen einzuloggen</dd>
+                <dt class="dl-mirrored dl-300">WebServerAuthWrongPassword</dt> <dd class="dl-300 hv">Ein Benutzer hat versucht mit einem falschen Passwort einzuloggen</dd>
+                <dt class="dl-mirrored dl-300">WebServerCreateNewSession</dt> <dd class="dl-300 hv">A user has logged in</dd>
+                <dt class="dl-mirrored dl-300">OnWebServerRequest</dt> <dd class="dl-300 hv">A request has been made (GET or POST)</dd>
+                <dt class="dl-mirrored dl-300">OnWebServerRequestGet</dt> <dd class="dl-300 hv">A GET request has been made</dd>
+                <dt class="dl-mirrored dl-300">OnWebServerRequestPost</dt> <dd class="dl-300 hv">A POST request has been made</dd>
+                <dt class="dl-mirrored dl-300">OnWebServerVirtualResource</dt> <dd class="dl-300 hv">A virtual resource was requested</dd>
+                <dt class="dl-mirrored dl-300">OnWebServerRealResource</dt> <dd class="dl-300 hv">A real resource (i.e. file) was requested</dd>
+            </dl>
+            <dl class="dl-mirrored">
+                <p class="dl-300">(base)</p>
+                <dt class="dl-mirrored dl-300">BeforeStartup</dt> <dd class="dl-300 hv">Fired synchronously before DoorPi starts</dd>
+                <dt class="dl-mirrored dl-300">OnStartup</dt> <dd class="dl-300 hv">Fired synchronously when DoorPi starts</dd>
+                <dt class="dl-mirrored dl-300">AfterStartup</dt> <dd class="dl-300 hv">Fired synchronously after DoorPi started</dd>
+            </dl>
+            <dl>
+                <p class="dl-300">(keyboard)</p>
+                <dt class="dl-mirrored dl-300">OnKeyDown</dt> <dd class="dl-300 hv">A key was physically pressed</dd>
+                <dt class="dl-mirrored dl-300">OnKeyUp</dt> <dd class="dl-300 hv">A key was physically released</dd>
+                <dt class="dl-mirrored dl-300">OnKeyPressed</dt> <dd class="dl-300 hv">A key was logically pressed.<br><br>This is fired together with OnKeyDown or OnKeyUp, depending on the
+                    keyboard's configuration. Some implementations only fire this event,
+                    for example when it's impossible or unreasonable to fire the other two.
+                    A Prime example for this are the RFID and NFC reader implementations,
+                    which don't have a notion of keys that can be pressed or not pressed."""</dd>
+                <dt class="dl-mirrored dl-300">OnTagUnknown</dt> <dd class="dl-300 hv">An unknown RFID / NFC tag was detected<br><br>Fired by the RFID and NFC reader implementations when a tag was
+                    detected that was not registered in the configuration. The tag's ID is
+                    supplied in the event's extra information as ``tag``.</dd>
+            <dl class="dl-mirrored">
+                <p class="dl-300">(sipphone)</p>
+                <dt class="dl-mirrored dl-300">OnSIPPhoneStart</dt> <dd class="dl-300 hv">The SIP phone was started</dd>
+                <dt class="dl-mirrored dl-300">OnSIPPhoneDestroy</dt> <dd class="dl-300 hv">The SIP phone was stopped</dd>
+                <dt class="dl-mirrored dl-300">OnCallOutgoing</dt> <dd class="dl-300 hv">DoorPi started calling a number</dd>
+                <dt class="dl-mirrored dl-300">OnCallConnect</dt> <dd class="dl-300 hv">A call was connected</dd>
+                <dt class="dl-mirrored dl-300">OnCallDisconnect</dt> <dd class="dl-300 hv">A call was disconnected</dd>
+                <dt class="dl-mirrored dl-300">BeforeCallIncoming</dt> <dd class="dl-300 hv">An incoming call was accepted</dd>
+                <dt class="dl-mirrored dl-300">OnCallRejected</dt> <dd class="dl-300 hv">An incoming call was rejected due to an unknown number</dd>
+                <dt class="dl-mirrored dl-300">OnCallBusy</dt> <dd class="dl-300 hv">An incoming call was rejected, because another call is active</dd>
+                <dt class="dl-mirrored dl-300">OnDTMF_[sequence]</dt> <dd class="dl-300 hv">The DTMF sequence [sequence] was received</dd>
+            </dl>
+        </div>
+    </body>
+</html>
+{# vim:set ts=4 noet sw=0: #}

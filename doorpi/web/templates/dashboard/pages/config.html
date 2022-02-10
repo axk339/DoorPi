@@ -1,7 +1,7 @@
 {% extends "dashboard/parts/base.html" %}
 {% block content %}
 			<script>
-				var oConfigObject = {};
+				//var oConfigObject = {};
 				var oPraparedConfigForConfigTable = {};
 				var oConfigTable = {};
 
@@ -51,35 +51,52 @@
 				function PrepareConfigTable() {
 					$('#idConfigTable').html('<table class="display table table-bordered table-hover table-striped" id="idConfigTableContent"></table>');
 					oConfigTable = $('#idConfigTableContent').dataTable({
+						"dom": 'rti',
 						"ajax": {
-							"url": "/status?module=config&output=json",
+							"url": "/control/config_get_config",
 							"type": "GET",
 							"dataSrc": function (aSourceObject) {
-								oConfigObject = aSourceObject.config
+								oConfigObject = aSourceObject.message.config;
 								oPraparedConfigForConfigTable = new Array();
-								$.each(oConfigObject, function(section_name, single_config_object) {
-									$.each(single_config_object, function(key_name, value) {
+								addConfigSectionButtons(oConfigObject)
+								Object.entries(oConfigObject).forEach( section => {
+									Object.entries(section[1]).forEach( ([key, data]) => {
+                                                                                if ((pos = key.indexOf(".")) != -1) {
+            		                                                                key = [key.slice(0,pos), key.slice(pos+1)][1]
+                                                                                }
+										var val = (key.includes("*") === true) ? "" : data[0];
 										oPraparedConfigForConfigTable.push({
-											section: section_name,
-											key: key_name,
-											value: value,
-											default_value: 'text',
-											description: 'beschreibung'
+											section: section[0],
+											key: key,
+											value: val,
+											default_value: data[1],
+                                                                                        type: data[2],
+											description: data[3]
 										});
 									});
 								});
 								return oPraparedConfigForConfigTable;
 							}
 						},
-						//data: oPraparedConfigForConfigTable,
+						data: oPraparedConfigForConfigTable,
 						"displayLength": 100,
+                                                "ordering": false,
 						"columns": [
 							{"data": "section", "title": "Sektion", "visible": false},
 							{"data": "key", "title": "Schlüssel"},
 							{"data": "value", "title": "Wert"},
 							{"data": "default_value", "title": "Vorgabe", "readonly": true},
+                                                        {"data": "type", "title": "type", "readonly": true},
 							{"data": "description", "title": "Beschreibung"}
 						],
+						"createdRow": function( row, data, dataIndex){
+    							if( data.type == ""){
+        							$(row).css("background-color", "#337ab741");
+    							}
+							if( data.default_value !== data.value){
+								$(row).find('td:eq(1)').css("color", "#337ab7");
+							}
+						},
 						"drawCallback": function (settings) {
 							var api = this.api();
 							var rows = api.rows({page:'current'}).nodes();
@@ -95,6 +112,22 @@
 							});
 						}
 					});
+					//prime to show the 'basic' config
+                                        oConfigTable.fnFilter('basics')
+				}
+
+                                function addConfigSectionButtons(data) {
+					$('#ConfigButtons').empty()
+					Object.entries(data).forEach( section => {
+						var element = document.createElement("button");
+						element.innerHTML = section[0];
+						element.setAttribute("name", section[0]);
+						element.setAttribute("class", "section btn btn-primary btn-sm")
+						element.setAttribute("style", "margin:5px;")
+                                                element.setAttribute("target", "description")
+						element.setAttribute("id", 'ConfigSection');
+ 						$('#ConfigButtons').append(element);
+					});
 				}
 
 				$(document).ready(function() {
@@ -105,7 +138,7 @@
 					PrepareSaveConfigModal();
 					ReloadConfigData();
 					$("#idReloadConfigButton").click(ReloadConfigData);
-				});
+				}); 
 			</script>
 			<div class="row">
 				<div class="col-lg-6">
@@ -126,7 +159,7 @@
 											<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
 											<h4 class="modal-title" id="idNewConfigModalLabel">New Config Key</h4>
 										</div>
-										<div class="modal-body">
+										<div class="modal-body" id="idNewConfigModalBody">
 											<div class="alert" style="display: none;" id="idNewConfigResponse"></div>
 											<div class="form-group">
 												<label>Section Name</label>
@@ -144,7 +177,28 @@
 												<label>Value</label>
 												<input class="form-control" placeholder="Enter the new value" id="idNewConfigValueInputVal">
 											</div>
+											<div id="idAdditionalInputRows"></div>
+												<span><button id="addRow" type="button" class="btn btn-info">+</button>
+												<button id="removeRow" type="button" class="btn btn-danger">-</button></span>
 											<script>
+												$("#addRow").click(function () {
+													var html = '';
+													html += '<div id="idAdditionalInputRows">';
+													html += '<div class="form-group">';
+													html += '<input type="text" name="title[]" class="form-control m-input" placeholder="Enter additional list value">';
+													html += '</div>';
+													html += '</div>';
+													$('#removeRow').css('visibility', 'visible')
+													$('#idAdditionalInputRows').append(html);
+												});
+
+												$("#idNewConfigModalBody").on('click', '#removeRow', function () {
+													$(this).closest('#idAdditionalInputRows').remove();
+													if ($('#idAdditionalInputRows').children().length == 0) {
+														$('#removeRow').css('visibility', 'hidden')
+													}
+												});												
+												
 												function ResetNewConfigModal () {
 													$('#idNewConfigSectionSelectVal')
 														.find('option')
@@ -175,7 +229,7 @@
 														} else {
 															sSectionName = $("#idNewConfigSectionSelectVal").val();
 														}
-
+														//TODO section.key ; section is useless atm
 														sNewConfigUrl += "?section=" + encodeRFC5987ValueChars(sSectionName);
 														sNewConfigUrl += "&key=" + encodeRFC5987ValueChars($("#idNewConfigKeyInputVal").val());
 														sNewConfigUrl += "&value=" + encodeRFC5987ValueChars($("#idNewConfigValueInputVal").val());
@@ -253,7 +307,7 @@
 
 												function LoadOldValueBeforeEdit() {
 													try {
-														$('#idEditConfigOldValue').text('(old value is "'+oConfigObject[$("#idEditConfigSectionSelectVal").val()][$("#idEditConfigKeyInputVal").val()]+'")');
+														$('#idEditConfigOldValue').text('(old value is "'+oConfigObject[$("#idEditConfigSectionSelectVal").val()][$("#idEditConfigKeyInputVal").val()][0]+'")');
 														$("#idEditConfigValueInputVal").removeAttr('disabled');
 													}
 													catch(err) {
@@ -361,7 +415,7 @@
 
 												function LoadOldValueBeforeDelete() {
 													try {
-														$('#idDeleteConfigOldValue').html('old value is "'+oConfigObject[$("#idDeleteConfigSectionSelectVal").val()][$("#idDeleteConfigKeyInputVal").val()]+'"');
+														$('#idDeleteConfigOldValue').html('old value is "'+oConfigObject[$("#idDeleteConfigSectionSelectVal").val()][$("#idDeleteConfigKeyInputVal").val()][0]+'"');
 														$('#idDeleteConfigOldValue').fadeIn("slow");
 													}
 													catch(err) {
@@ -511,11 +565,36 @@
 					<div class="panel panel-primary">
 						<div class="panel-heading"><i class="fa fa-bar-chart-o fa-fw">Konfiguration</i></div>
 						<!-- /.panel-heading -->
-						<div class="panel-body">
+						<div class="panel-body" id="ConfigButtons">
+							<script>
+								$("#ConfigButtons").on('click', '.section', function() {
+									oConfigTable.fnFilter( this.name );
+									$("#description").attr("src", `manual/${$(this).attr('name')}.html`);
+								});
+								function setIframeHeight(id) {
+									var ifrm = document.getElementById(id);
+									var doc = ifrm.contentDocument? ifrm.contentDocument: 
+										ifrm.contentWindow.document;
+									ifrm.style.visibility = 'hidden';
+									ifrm.style.height = "10px"; // reset to minimal height ...
+									// IE opt. for bing/msn needs a bit added or scrollbar appears
+									ifrm.style.height = getDocHeight( doc ) + 4 + "px";
+									ifrm.style.visibility = 'visible';
+								}
+								function getDocHeight(doc) {
+									doc = doc || document;
+									// stackoverflow.com/questions/1145850/
+									var body = doc.body, html = doc.documentElement;
+									var height = Math.max( body.scrollHeight, body.offsetHeight, 
+									html.clientHeight, html.scrollHeight, html.offsetHeight );
+									return height;
+								}
+							</script>
 						</div>
 						<!-- /.panel-body -->
 						<div class="panel-footer" id="idConfigTable">
 						</div>
+						<iframe src="manual/basics.html" class="iframe-desc" id="description" onload="setIframeHeight(this.id)"></iframe>
 						<!-- /.panel-footer -->
 					</div>
 					<!-- /.panel -->

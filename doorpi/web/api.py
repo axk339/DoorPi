@@ -1,5 +1,8 @@
 """DoorPiWeb handlers for the JSON API"""
 import json
+import enum
+import pathlib
+from urllib.parse import unquote
 import textwrap
 import typing as T
 
@@ -37,8 +40,30 @@ async def _control_trigger_event(
     )
 
 
-@routes.get("/control/config_value_get")
+@routes.get("/control/config_get_config")
 async def _control_config_get(
+        request: aiohttp.web.BaseRequest,
+) -> aiohttp.web.StreamResponse:
+    _keypaths = doorpi.INSTANCE.config.keypaths
+    config = doorpi.INSTANCE.get_status(modules=["config"], name=_keypaths)
+    return aiohttp.web.json_response(
+            {"success": True, "message": config.dictionary},
+            dumps=json_encoder.encode,
+        )
+
+
+@routes.get("/control/config_get_configfile")
+async def _control_configfile_get(
+        request: aiohttp.web.BaseRequest,
+) -> aiohttp.web.StreamResponse:
+    return aiohttp.web.json_response(
+            {"success": True, "message": doorpi.INSTANCE.configfile},
+            dumps=json_encoder.encode,
+        )
+
+
+@routes.get("/control/config_value_get")
+async def _control_configvalue_get(
     request: aiohttp.web.BaseRequest,
 ) -> aiohttp.web.StreamResponse:
     if "key" not in request.query or request.can_read_body:
@@ -58,7 +83,7 @@ async def _control_config_get(
 
 
 @routes.get("/control/config_value_set")
-async def _control_config_set(
+async def _control_configvalue_set(
     request: aiohttp.web.BaseRequest,
 ) -> aiohttp.web.StreamResponse:
     if (
@@ -69,7 +94,7 @@ async def _control_config_set(
         raise aiohttp.web.HTTPBadRequest()
 
     try:
-        doorpi.INSTANCE.config[request.query["key"]] = request.query["value"]
+        doorpi.INSTANCE.config[request.query["key"]] = unquote(request.query["value"])
     except (IndexError, KeyError, TypeError, ValueError) as err:
         return aiohttp.web.json_response(
             {"success": False, "message": f"{type(err).__name__}: {err}"},
@@ -83,7 +108,7 @@ async def _control_config_set(
 
 
 @routes.get("/control/config_value_delete")
-async def _control_config_del(
+async def _control_configvalue_del(
     request: aiohttp.web.BaseRequest,
 ) -> aiohttp.web.StreamResponse:
     if "key" not in request.query or request.can_read_body:
@@ -107,11 +132,15 @@ async def _control_config_del(
 async def _control_config_save(
     request: aiohttp.web.BaseRequest,
 ) -> aiohttp.web.StreamResponse:
-    if "key" not in request.query or request.can_read_body:
-        raise aiohttp.web.HTTPBadRequest()
+    configfile = ""
+    if "configfile" in request.query:
+        _rel = request.query["configfile"]
+        if _rel.startswith("/"):
+            _rel = _rel.replace("/", "", 1)
+        configfile = pathlib.PosixPath(doorpi.INSTANCE.base_path, _rel)
 
     try:
-        doorpi.INSTANCE.config.save(doorpi.INSTANCE.configfile)
+        doorpi.INSTANCE.config.save(configfile or doorpi.INSTANCE.configfile)
     except (KeyError, TypeError) as err:
         raise aiohttp.web.HTTPBadRequest() from err
     else:
@@ -176,11 +205,15 @@ async def _status(
     )
 
 
-class SetAsTupleJSONEncoder(json.JSONEncoder):
+class ComplexJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (set, frozenset)):
             return tuple(obj)
+        elif isinstance(obj, enum.Enum):
+            return obj.name
+        elif isinstance(obj, pathlib.PosixPath):
+            return str(obj)
         return super().default(obj)
 
 
-json_encoder = SetAsTupleJSONEncoder()
+json_encoder = ComplexJSONEncoder()

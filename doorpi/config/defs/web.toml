@@ -20,6 +20,7 @@ The default of ``0.0.0.0`` binds to all addresses.
     This setting is ignored when using systemd, use
     ``systemctl edit --full doorpi.socket`` to change it.
     See ``systemd.socket(5)`` for more information."""
+_type = "string"
 _default = "0.0.0.0"
 
 [config.web.port]
@@ -30,6 +31,7 @@ _description = """Listen on this port
     This setting is ignored when using systemd, use
     ``systemctl edit --full doorpi.socket`` to change it.
     See ``systemd.socket(5)`` for more information."""
+_type = "int"
 _default = 50317
 _min = 1
 _max = 65535
@@ -53,22 +55,27 @@ _default = ".*"
 [config.web.areas."*"]
 _description = "Regular expressions matching URLs in area {0!r}"
 _type = "string"
+_default = ""
 
 [config.web.users."*"]
 _description = "Password for {0!r}"
 _type = "password"
+_default = ""
 
 [config.web.groups."*"]
 _description = "Members of group {0!r}"
 _type = "list"
 _membertype = "string"
+_default = []
 
 [config.web.readaccess."*"]
 _description = "Areas that group {0!r} has read access to"
 _type = "list"
 _membertype = "string"
+_default = []
 
 [config.web.writeaccess."*"]
 _description = "Areas that group {0!r} has read and write access to"
 _type = "list"
 _membertype = "string"
+_default = []

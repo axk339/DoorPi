@@ -9,7 +9,6 @@ import enum
 import importlib
 import math
 import pathlib
-import re
 from typing import Any, Dict, Mapping, Sequence, Tuple, Type
 
 
@@ -66,6 +65,9 @@ class Anything(ValueType):
     def insertcast(value: Any) -> Any:
         return value
 
+    def __str__(self):
+        return __class__.__name__
+
 
 class Int(ValueType):
     """An integer number (1, 2, -5, etc.)"""
@@ -80,11 +82,19 @@ class Int(ValueType):
 
     def insertcast(self, value: Any) -> int:
         # pylint: disable=no-member
+        if isinstance(value, str):
+            if value.isdigit():
+                value = int(value)
+            else:
+                raise TypeError(f"Needed an integer, value includes unknown character")
         if isinstance(value, int):
             if self.__min <= value <= self.__max:
                 return value
-            raise ValueError(f"Integer out of range: {value!r}")
+            raise ValueError(f"Integer out of range ({self.__min}/{self.__max}): {value!r}")
         raise TypeError(f"Needed an integer, got {value!r}")
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class Float(ValueType):
@@ -105,6 +115,9 @@ class Float(ValueType):
                 return float(value)
             raise ValueError(f"Number out of range: {value!r}")
         raise TypeError(f"Needed a number, got {value!r}")
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class Bool(ValueType):
@@ -127,6 +140,9 @@ class Bool(ValueType):
                 return False
             raise ValueError(f"Not a boolean value: {value!r}")
         raise TypeError(f"Cannot cast {value!r} to boolean")
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class String(ValueType):
@@ -152,9 +168,15 @@ class String(ValueType):
             return str(value)
         raise ValueError(f"Expected string, got {value!r}")
 
+    def __str__(self):
+        return __class__.__name__
+
 
 class Password(String):
     """A string of characters that should not be shown to the user"""
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class Date(ValueType):
@@ -169,6 +191,9 @@ class Date(ValueType):
         if isinstance(value, datetime.date):
             return value
         raise TypeError(f"Expected date, got {value!r}")
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class Time(ValueType):
@@ -190,6 +215,9 @@ class Time(ValueType):
             )
         raise TypeError(f"Expected time, got {value!r}")
 
+    def __str__(self):
+        return __class__.__name__
+
 
 class DateTime(ValueType):
     """A date and time, with or without timezone"""
@@ -201,6 +229,9 @@ class DateTime(ValueType):
         if isinstance(value, datetime.datetime):
             return value
         raise TypeError(f"Expected date and time, got {value!r}")
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class List(ValueType):
@@ -218,15 +249,18 @@ class List(ValueType):
 
     def insertcast(self, value: Any) -> Tuple[Any, ...]:
         # pylint: disable=no-member
-        if not isinstance(value, collections.abc.Iterable) or isinstance(
-            value, str
-        ):
+        if isinstance(value, str):
+            value = tuple(value.split(","))
+        if not isinstance(value, collections.abc.Iterable):
             value = (value,)
         return tuple(self.__membertype.insertcast(v) for v in value)
 
     def querycast(self, value: Sequence[Any]) -> Tuple[Any, ...]:
         # pylint: disable=no-member
         return tuple(self.__membertype.querycast(v) for v in value)
+
+    def __str__(self):
+        return __class__.__name__
 
 
 class Enum(ValueType):
@@ -271,6 +305,9 @@ class Enum(ValueType):
 
         raise ValueError(f"{value!r} is no member or value of {self.__enum}")
 
+    def __str__(self):
+        return __class__.__name__
+
 
 class Path(ValueType):
     """A path in the filesystem"""
@@ -288,6 +325,9 @@ class Path(ValueType):
     @staticmethod
     def querycast(value: pathlib.Path) -> pathlib.Path:
         return value.expanduser()
+
+    def __str__(self):
+        return __class__.__name__
 
 
 _types: Dict[str, Type[ValueType]] = {

@@ -1,0 +1,59 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="/dashboard/dist/css/sb-admin-2.css" />
+    </head>
+    <body>
+        <div class="desc-body">
+            <p class="desc-heading">Currently supported keyboard [type]s:</p>
+            <p><span class="definitions">filesystem</span><span> pseudo-keyboard using files</span></p>
+            <p><span class="definitions">gpio</span><span> RaspberryPi onboard header</p>
+            <p><span class="definitions">piface</span><span> PiFace IO expander</p>
+            <p><span class="definitions">pn532</span><span> PN532 NFC module</p>
+            <p><span class="definitions">rdm6300</span><span> RDM6300 RFID module</p>
+            <p><span class="definitions">serial</span><span> Serially connected keyboard</p>
+            <br>
+
+            <p class="desc-heading">Konfigurationsbeispiele</p>
+            <p><span class="bold">[keyboard.onboardpins]</span><span class="hv">  # Definition eines Keyboards namens "onboardpins"</span></p>
+            <p><span class="bold">type = "gpio"</span><span class="hv">  # ... vom Typ GPIO</span></p>
+            <p><span class="bold">mode = "BCM"</span><span class="hv">  # ... Nummerierung BCM</span></p>
+            <p><span class="bold">pull_up_down = "UP"</span><span class="hv">  ... als Pullup IO</span></p>
+            <p><span class="bold">input.27 = "call:**613#614"</span><span class="hv">  ... das bei Schließen des Pin GPIO_27 die Aktion "call:..." ausführt </span></p>
+            <br>
+            <p class="desc-heading">Erweiterte Erklärungen</p>
+            <dl>
+                <dt class="dl-mirrored dl-400">keyboard.*.polarity</dt> <dd class="dl-400 hv">A polarity of "HIGH" means VCC=true and GND=false on a pin.<br>
+                    A polarity of "LOW" reverses these interpretations. Affects both input and output pins.</dd>
+            </dl>
+            <br>
+            <p class="desc-heading">Inputliste</p>
+            <dl>
+                <dt class="dl-mirrored dl-400"><span>call:</span><span class="command">address</span></dt> <dd class="dl-400 hv">Call the specified SIP {address}<br><br>Following actions will be executed immediately and will not wait
+                    for the call to connect, time out or finish. <br><br>Example: call:**613#614</dd>
+                <dt class="dl-mirrored dl-400"><span>callf:</span><span class="command">file</span></dt> <dd class="dl-400 hv">Call the SIP address specified in {file}.  The file will be read
+                    each time the event is fired, contrary to {call} which has a static address. See the note about {call}.</dd>
+                <dt class="dl-mirrored dl-400"><span>exec:</span><span class="command">command</span></dt> <dd class="dl-400 hv">Execute the {command} with /bin/sh.</dd>
+                <dt class="dl-mirrored dl-400">hangup</dt> <dd class="dl-400 hv">Hang up all active (connected/ringing) SIP calls.</dd>
+                <dt class="dl-mirrored dl-400"><span>http_request:</span><span class="command">url</span></dt> <dd class="dl-400 hv">Perform an HTTP GET request to {url}.</dd>
+                <dt class="dl-mirrored dl-400"><span>log:</span><span class="command">message</span></dt> <dd class="dl-400 hv">Print the formatted {message} into the log (with "info" log level)</dd>
+                <dt class="dl-mirrored dl-400"><span>mail:</span><span class="command">receiver,subject,message,snapshot</span></dt> <dd class="dl-400 hv">Send a mail to {receiver} with {subject} and the formatted
+                    {message} text.  If {snapshot} is true, attach the latest snapshot to the mail.</dd>
+                <dt class="dl-mirrored dl-400"><span>out:</span><span class="command">pin,value,stopvalue,holdtime,interrupt</span></dt> <dd class="dl-400 hv">Set output pin {pin} to {value}.<br><br>After {holdtime} seconds elapsed, set it to {stopvalue}.
+                    If input pin {interrupt} is pressed, skip the timer.</dd>
+                <dt class="dl-mirrored dl-400"><span>sleep:</span><span class="command">time</span></dt> <dd class="dl-400 hv">Wait {time} seconds before continuing with the next action.</dd>
+                <dt class="dl-mirrored dl-400"><span>snap_url:</span><span class="command">url</span></dt> <dd class="dl-400 hv">Download the {url} and save it as snapshot.</dd>
+                <dt class="dl-mirrored dl-400">snap_picam</dt> <dd class="dl-400 hv">Take a snapshot with the Raspberry Pi Camera.</dd>
+                <dt class="dl-mirrored dl-400">snap_stream</dt> <dd class="dl-400 hv">Using ffmpeg to convert the last frame of a stream (eg rtsp) to a snaphot</dd>
+                <dt class="dl-mirrored dl-400"><span>statusfile:</span><span class="command">file,content</span></dt> <dd class="dl-400 hv">Write the formatted {content} into {file}.</dd>
+                <dt class="dl-mirrored dl-400"><span>symcon_ips3:</span><span class="command">action,key[,value]</span></dt> <dd class="dl-400 hv">Perform an action with the Symcon IPS 3.<br><br>
+                    set: Set {key} to the formatted {value}<br>
+                    call: Retrieve the value of {key} and call it as SIP address.  See the note about the {call} action.</dd>
+                <dt class="dl-mirrored dl-400"><span>mycroft_send:</span><span class="command">msgtype_hm, msgtype_my, text</span></dt> <dd class="dl-400 hv">Send a message to the mycroft message bus.<br><br>
+                    msgtype_hm: Hivemind message type to tell how to route the message<br>
+                    msgtype_my: Mycroft message type to tell which service to use<br>
+                    text: text on the message that is uttered</dd>
+            </dl>
+            <p>More on the inputs in the specific config sections</p>
+        </div>
+    </body>
+</html>
