@@ -417,3 +417,15 @@ p.dl-300 {
     height: 100%;
     border: 0px;
 }
+
+#removeNewConfigRow {
+    visibility: hidden;
+}
+
+#removeEditConfigRow {
+    visibility: hidden;
+}
+
+.btn-xs-20 {
+    width: 20px;
+}

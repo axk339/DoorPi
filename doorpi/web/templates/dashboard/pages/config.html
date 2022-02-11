@@ -61,16 +61,16 @@
 								addConfigSectionButtons(oConfigObject)
 								Object.entries(oConfigObject).forEach( section => {
 									Object.entries(section[1]).forEach( ([key, data]) => {
-                                                                                if ((pos = key.indexOf(".")) != -1) {
-            		                                                                key = [key.slice(0,pos), key.slice(pos+1)][1]
-                                                                                }
+										if ((pos = key.indexOf(".")) != -1) {
+											key = [key.slice(0,pos), key.slice(pos+1)][1]
+										}
 										var val = (key.includes("*") === true) ? "" : data[0];
 										oPraparedConfigForConfigTable.push({
 											section: section[0],
 											key: key,
 											value: val,
 											default_value: data[1],
-                                                                                        type: data[2],
+											type: data[2],
 											description: data[3]
 										});
 									});
@@ -113,7 +113,7 @@
 						}
 					});
 					//prime to show the 'basic' config
-                                        oConfigTable.fnFilter('basics')
+                    oConfigTable.fnFilter('basics')
 				}
 
                                 function addConfigSectionButtons(data) {
@@ -137,7 +137,7 @@
 					PrepareDeleteConfigModal();
 					PrepareSaveConfigModal();
 					ReloadConfigData();
-				}); 
+				});
 			</script>
 			<div class="row">
 				<div class="col-lg-6">
@@ -173,31 +173,33 @@
 												<input class="form-control" placeholder="Enter name of new key" id="idNewConfigKeyInputVal">
 											</div>
 											<div class="form-group" id="idNewConfigValueInput">
-												<label>Value</label>
+												<label>Value (one line each for list entries [+]) </label>
 												<input class="form-control" placeholder="Enter the new value" id="idNewConfigValueInputVal">
 											</div>
-											<div id="idAdditionalInputRows"></div>
-												<span><button id="addRow" type="button" class="btn btn-info">+</button>
-												<button id="removeRow" type="button" class="btn btn-danger">-</button></span>
+											<div id="idAdditionalNewConfigInputRows"></div>
+											<span>
+												<button id="addNewConfigRow" type="button" class="btn-xs btn-xs-20 btn-info">+</button>
+												<button id="removeNewConfigRow" type="button" class="btn-xs btn-xs-20 btn-danger">-</button>
+											</span>
 											<script>
-												$("#addRow").click(function () {
+												$("#addNewConfigRow").click( function () {
 													var html = '';
-													html += '<div id="idAdditionalInputRows">';
+													html += '<div id="idAddedInputRows">';
 													html += '<div class="form-group">';
 													html += '<input type="text" name="title[]" class="form-control m-input" placeholder="Enter additional list value">';
 													html += '</div>';
 													html += '</div>';
-													$('#removeRow').css('visibility', 'visible')
-													$('#idAdditionalInputRows').append(html);
+													$('#removeNewConfigRow').css('visibility', 'visible')
+													$('#idAdditionalNewConfigInputRows').append(html);
 												});
 
-												$("#idNewConfigModalBody").on('click', '#removeRow', function () {
-													$(this).closest('#idAdditionalInputRows').remove();
-													if ($('#idAdditionalInputRows').children().length == 0) {
-														$('#removeRow').css('visibility', 'hidden')
+												$("#removeNewConfigRow").click( function () {
+													$("#idAdditionalNewConfigInputRows").children().last().remove();
+													if ($('#idAdditionalNewConfigInputRows').children().length == 0) {
+														$('#removeNewConfigRow').css('visibility', 'hidden')
 													}
-												});												
-												
+												});
+
 												function ResetNewConfigModal () {
 													$('#idNewConfigSectionSelectVal')
 														.find('option')
@@ -210,6 +212,8 @@
 													$("#idNewConfigSectionInputVal").val('');
 													$("#idNewConfigKeyInputVal").val('');
 													$("#idNewConfigValueInputVal").val('');
+													$("#idAdditionalNewConfigInputRows").empty();
+													$('#removeNewConfigRow').css('visibility', 'hidden')
 												}
 												function PrepareNewConfigModal () {
 													$("#idNewConfigSectionSelectVal").change(function() {
@@ -220,6 +224,10 @@
 														}
 													});
 
+													$("#idNewConfigModalClose").click( function () {
+														ResetNewConfigModal()
+													});
+
 													$("#idNewConfigModalButtonSave").click(function() {
 														var sNewConfigUrl = "/control/config_value_set";
 														var sSectionName = "";
@@ -228,10 +236,19 @@
 														} else {
 															sSectionName = $("#idNewConfigSectionSelectVal").val();
 														}
-														//TODO section.key ; section is useless atm
+														// get the values from added forms
+														var value = $("#idNewConfigValueInputVal").val()
+														if ($('#idAdditionalNewConfigInputRows').children().length !== 0) {
+															$('#idAdditionalNewConfigInputRows').children().each( function () {
+																var val = $(this).find("input").val()
+																if (val !== "") {
+																	value += '|'+val
+																}
+															})
+														}
 														sNewConfigUrl += "?section=" + encodeRFC5987ValueChars(sSectionName);
-														sNewConfigUrl += "&key=" + encodeRFC5987ValueChars($("#idNewConfigKeyInputVal").val());
-														sNewConfigUrl += "&value=" + encodeRFC5987ValueChars($("#idNewConfigValueInputVal").val());
+														sNewConfigUrl += "&key=" + encodeRFC5987ValueChars("".concat(sSectionName, ".", $("#idNewConfigKeyInputVal").val()));
+														sNewConfigUrl += "&value=" + encodeRFC5987ValueChars(value);
 
 														$.getJSON(sNewConfigUrl, function(result){
 															if (result.success) {
@@ -248,7 +265,7 @@
 											</script>
 										</div>
 										<div class="modal-footer">
-											<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+											<button id="idNewConfigModalClose" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 											<button type="button" class="btn btn-primary" id="idNewConfigModalButtonSave">Save changes</button>
 										</div>
 									</div>
@@ -280,10 +297,32 @@
 												</select>
 											</div>
 											<div class="form-group" id="idEditConfigValueInput">
-												<label>Value <span id="idEditConfigOldValue"></span></label>
+												<label>Value (one line each for list entries [+]) <span id="idEditConfigOldValue"></span></label>
 												<input class="form-control" placeholder="Enter the new value" id="idEditConfigValueInputVal" disabled>
 											</div>
+											<div id="idAdditionalEditConfigInputRows"></div>
+											<span>
+												<button id="addEditConfigRow" type="button" class="btn-xs btn-xs-20 btn-info">+</button>
+												<button id="removeEditConfigRow" type="button" class="btn-xs btn-xs-20 btn-danger">-</button>
+											</span>
 											<script>
+												$("#addEditConfigRow").click( function () {
+													var html = '';
+													html += '<div id="idAddedInputRows">';
+													html += '<div class="form-group">';
+													html += '<input type="text" name="title[]" class="form-control m-input" placeholder="Enter additional list value">';
+													html += '</div>';
+													html += '</div>';
+													$('#removeEditConfigRow').css('visibility', 'visible')
+													$('#idAdditionalEditConfigInputRows').append(html);
+												});
+
+												$("#removeEditConfigRow").click( function () {
+													$("#idAdditionalEditConfigInputRows").children().last().remove();
+													if ($('#idAdditionalEditConfigInputRows').children().length == 0) {
+														$('#removeEditConfigRow').css('visibility', 'hidden')
+													}
+												});
 												function ResetEditConfigModal() {
 													$('#idEditConfigSectionSelectVal')
 														.find('option')
@@ -301,12 +340,14 @@
 														.attr('disabled', 'disabled')
 													;
 													$("#idEditConfigValueInputVal").val('');
+													$("#idAdditionalEditConfigInputRows").empty();
+													$('#removeEditConfigRow').css('visibility', 'hidden')
 													LoadOldValueBeforeEdit();
 												}
 
 												function LoadOldValueBeforeEdit() {
 													try {
-														$('#idEditConfigOldValue').text('(old value is "'+oConfigObject[$("#idEditConfigSectionSelectVal").val()][$("#idEditConfigKeyInputVal").val()][0]+'")');
+														$('#idEditConfigOldValue').text('  - old value is "'+oConfigObject[$("#idEditConfigSectionSelectVal").val()][$("#idEditConfigKeyInputVal").val()][0]);
 														$("#idEditConfigValueInputVal").removeAttr('disabled');
 													}
 													catch(err) {
@@ -331,8 +372,15 @@
 																.attr('disabled', 'disabled')
 															;
 														} else {
-															$.each(Object.keys(oConfigObject[$("#idEditConfigSectionSelectVal").val()]).sort(SortByName), function(key_name, single_key_object) {
-																$('#idEditConfigKeyInputVal').append('<option value="'+single_key_object+'">'+single_key_object+'</option>');
+															$.each(Object.keys(oConfigObject[$("#idEditConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
+																if (!(key_name.includes("*"))) {
+																	if ((pos = key_name.indexOf(".")) != -1) {
+																		var key = [key_name.slice(0,pos), key_name.slice(pos+1)][1]
+																	} else {
+																		var key = key_name
+																	}
+																	$('#idEditConfigKeyInputVal').append('<option value="'+key_name+'">'+key+'</option>');
+																}
 															});
 														}
 														LoadOldValueBeforeEdit();
@@ -341,9 +389,19 @@
 
 													$("#idEditConfigModalButtonSave").click(function() {
 														var sNewConfigUrl = "/control/config_value_set";
+														// get the values from added forms
+														var value = $("#idEditConfigValueInputVal").val()
+														if ($('#idAdditionalEditConfigInputRows').children().length !== 0) {
+															$('#idAdditionalEditConfigInputRows').children().each( function () {
+																var val = $(this).find("input").val()
+																if (val !== "") {
+																	value += '|'+val
+																}
+															})
+														}
 														sNewConfigUrl += "?section=" + encodeRFC5987ValueChars($("#idEditConfigSectionSelectVal").val());
 														sNewConfigUrl += "&key=" + encodeRFC5987ValueChars($("#idEditConfigKeyInputVal").val());
-														sNewConfigUrl += "&value=" + encodeRFC5987ValueChars($("#idEditConfigValueInputVal").val());
+														sNewConfigUrl += "&value=" + encodeRFC5987ValueChars(value);
 
 														$.getJSON(sNewConfigUrl, function(result) {
 															if (result.success) {
@@ -437,8 +495,10 @@
 																.attr('disabled', 'disabled');
 															;
 														} else {
-															$.each(Object.keys(oConfigObject[$("#idDeleteConfigSectionSelectVal").val()]).sort(SortByName), function(key_name, single_key_object) {
-																$('#idDeleteConfigKeyInputVal').append('<option value="'+single_key_object+'">'+single_key_object+'</option>');
+															Object.entries(oConfigObject[$("#idDeleteConfigSectionSelectVal").val()]).forEach( ([key_name, data]) => {
+																if ((!(key_name.includes("*"))) && (data[1] !== data[0])) {
+																	$('#idDeleteConfigKeyInputVal').append('<option value="'+key_name+'">'+key_name+'</option>');
+																}
 															});
 														}
 														LoadOldValueBeforeDelete();
@@ -572,7 +632,7 @@
 								});
 								function setIframeHeight(id) {
 									var ifrm = document.getElementById(id);
-									var doc = ifrm.contentDocument? ifrm.contentDocument: 
+									var doc = ifrm.contentDocument? ifrm.contentDocument:
 										ifrm.contentWindow.document;
 									ifrm.style.visibility = 'hidden';
 									ifrm.style.height = "10px"; // reset to minimal height ...
@@ -584,7 +644,7 @@
 									doc = doc || document;
 									// stackoverflow.com/questions/1145850/
 									var body = doc.body, html = doc.documentElement;
-									var height = Math.max( body.scrollHeight, body.offsetHeight, 
+									var height = Math.max( body.scrollHeight, body.offsetHeight,
 									html.clientHeight, html.scrollHeight, html.offsetHeight );
 									return height;
 								}

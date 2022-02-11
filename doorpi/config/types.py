@@ -250,7 +250,7 @@ class List(ValueType):
     def insertcast(self, value: Any) -> Tuple[Any, ...]:
         # pylint: disable=no-member
         if isinstance(value, str):
-            value = tuple(value.split(","))
+            value = tuple(value.split("|"))
         if not isinstance(value, collections.abc.Iterable):
             value = (value,)
         return tuple(self.__membertype.insertcast(v) for v in value)
