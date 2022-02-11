@@ -301,16 +301,16 @@ def _keypaths(d):
             if isinstance(v, dict):
                 paths += iterdict(v, path + [k])
             else:
-                #TODO get the test version!
-                # to serve both self.__values and self.__defs
+                _path = path[:]
                 if k not in ("_default", "_type", "_description", "_enumcls", "_min", "_max", "_membertype",):
-                    path.append(k)
-                _path = '.'.join(path)
+                    _path.append(k)
+                _path = '.'.join(_path)
                 if _path not in paths:
                     paths.append(_path)
         return paths
 
     return iterdict(d, [])
+
 
 
 def keymatch(pat, against):
