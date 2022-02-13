@@ -11,12 +11,14 @@ import importlib
 from shutil import rmtree
 from argparse import ArgumentParser
 
+post_notify = False
+
 ap = ArgumentParser()
 ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
 ap.add_argument("install", help="build and install the package")
 args = vars(ap.parse_args())
 
-SYSTEM_REQUIREMENTS = ["python3-pip", "ffmpeg"]
+SYSTEM_REQUIREMENTS = ["ffmpeg"]
 
 # base path of the cloned git
 BASE_PATH = Path(__file__).resolve().parent
@@ -42,18 +44,15 @@ def pako_installed():
             rmtree("/tmp/pako")
     
     if not importlib.util.find_spec("pako"):
-        proc_clone = subprocess.Popen(["git", "clone", "https://github.com/MycroftAI/pako"], cwd="/tmp")
-        proc_clone.wait()
-        if proc_clone.returncode != 0:
-            cleanup()
-            return False
-
-        proc_setup = subprocess.Popen(["python3", "setup.py", "install"], cwd="/tmp/pako")
-        proc_setup.wait()
+        cmd = ["python3", "-m", "pip", "install", "pako"]
+        if geteuid() == 0:
+            cmd.insert(0, "sudo")
+        proc_pip = subprocess.Popen(cmd)
+        proc_pip.wait()
         cleanup()
-        if proc_setup.returncode != 0:
+        if proc_pip.returncode != 0:
             return False
-
+        
     return True
 
 
@@ -62,6 +61,7 @@ try:
     import pip
     import setuptools
     import wheel
+    import pip._internal.utils.misc as pip_
 except ImportError as exp:
     print("install missing pip now (%s)" % exp)
     from get_pip import main as check_for_pip
@@ -72,22 +72,25 @@ except ImportError as exp:
         check_for_pip()
     except SystemExit as e:
         if e.code == 0:
-            # Thus additional system packages are required, install a os independent packet manager (python package)
-            if not pako_installed():
-                print(f'''Exiting. Can't install the required packages. 
-                System Requirements: {SYSTEM_REQUIREMENTS} 
-                Please install above packages manually before installing DoorPi''')
-                sys.exit()
             execv(sys.executable, [sys.executable] + old_args)
         else:
             print("install pip failed with error code %s" % e.code)
             sys.exit(e.code)
 
+if int((pip_.__version__).split(".")[0]) < 22:
+    cmd = ["python3", "-m", "pip", "install", "pip", "--upgrade"]
+    if geteuid() == 0:
+        cmd.insert(0, "sudo")
+    proc_pip = subprocess.Popen(cmd)
+    proc_pip.wait()
+    
 if pako_installed():
     from pako import PakoManager
     manager = PakoManager()
     manager.update()
     manager.install(SYSTEM_REQUIREMENTS, flags=['no-confirm'])
+else:
+    post_notify = True
 
 datapath = BASE_PATH / "data"
 substkeys = {
@@ -137,3 +140,7 @@ setuptools.setup(
         (join(PREFIX, "lib/systemd/system"), ["data/doorpi.service", "data/doorpi.socket"]),
     ],
 )
+
+if post_notify:
+    print(f'''Please install following system packages manually. 
+    System Requirements: {SYSTEM_REQUIREMENTS} ''')
