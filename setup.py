@@ -40,18 +40,19 @@ def pako_installed():
     def cleanup():
         if exists("/tmp/pako"):
             rmtree("/tmp/pako")
+    
+    if not importlib.util.find_spec("pako"):
+        proc_clone = subprocess.Popen(["git", "clone", "https://github.com/MycroftAI/pako"], cwd="/tmp")
+        proc_clone.wait()
+        if proc_clone.returncode != 0:
+            cleanup()
+            return False
 
-    proc_clone = subprocess.Popen(["git", "clone", "https://github.com/MycroftAI/pako"], cwd="/tmp")
-    proc_clone.wait()
-    if proc_clone.returncode != 0:
+        proc_setup = subprocess.Popen(["python3", "setup.py", "install"], cwd="/tmp/pako")
+        proc_setup.wait()
         cleanup()
-        return False
-
-    proc_setup = subprocess.Popen(["python3", "setup.py", "install"], cwd="/tmp/pako")
-    proc_setup.wait()
-    cleanup()
-    if proc_setup.returncode != 0:
-        return False
+        if proc_setup.returncode != 0:
+            return False
 
     return True
 
@@ -82,7 +83,7 @@ except ImportError as exp:
             print("install pip failed with error code %s" % e.code)
             sys.exit(e.code)
 
-if importlib.util.find_spec("pako"):
+if pako_installed():
     from pako import PakoManager
     manager = PakoManager()
     manager.update()
