@@ -18,7 +18,7 @@ ap.add_argument("--prefix", required=False, help="prefix for setuptools setup")
 ap.add_argument("install", help="build and install the package")
 args = vars(ap.parse_args())
 
-SYSTEM_REQUIREMENTS = ["ffmpeg"]
+SYSTEM_REQUIREMENTS = ["ffmpeg","python3-pip"]
 
 # base path of the cloned git
 BASE_PATH = Path(__file__).resolve().parent
