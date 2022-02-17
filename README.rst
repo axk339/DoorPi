@@ -105,7 +105,7 @@ Installation
 
         git clone https://github.com/Wuestengecko/DoorPi.git
         cd DoorPi
-        sudo python setup.py install --prefix=/usr/local
+        sudo ./setup.sh
 
     Der  Webserver (default) ist erreichbar unter http://<xxx.xxx.xxx.xxx>:50317 (leitet zur index.html weiter)
 
@@ -218,7 +218,7 @@ Installation
 
         git clone https://github.com/Wuestengecko/DoorPi.git
         cd DoorPi
-        sudo python setup.py install --prefix=/usr/local
+        sudo ./setup.sh
 
     The webserver (default) is exposed at http://<xxx.xxx.xxx.xxx>:50317 (redirects to index.html)
 
