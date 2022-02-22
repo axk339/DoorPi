@@ -40,10 +40,17 @@
 						ResetEditConfigModal();
 						ResetDeleteConfigModal();
 						ResetSaveConfigModal();
-						$.each(Object.keys(oConfigObject).sort(SortByName), function(section_name, single_config_object) {
-							$('#idNewConfigSectionSelectVal').append('<option value="'+single_config_object+'">'+single_config_object+'</option>');
-							$('#idEditConfigSectionSelectVal').append('<option value="'+single_config_object+'">'+single_config_object+'</option>');
-							$('#idDeleteConfigSectionSelectVal').append('<option value="'+single_config_object+'">'+single_config_object+'</option>');
+						$.each(Object.keys(oConfigObject).sort(SortByName), function(idx, section_name) {
+							keys = Object.keys(oConfigObject[section_name])
+							// [NewConfig] only add sections with wildcard entries
+							if (keys.some(key => key.includes("*"))) {
+								$('#idNewConfigSectionSelectVal').append('<option value="'+section_name+'">'+section_name+'</option>');
+							}
+							// [EditConfig] dont add sections with only wildcard entries
+							if (!keys.every(key => key.includes("*"))) {
+								$('#idEditConfigSectionSelectVal').append('<option value="'+section_name+'">'+section_name+'</option>');
+							}
+							$('#idDeleteConfigSectionSelectVal').append('<option value="'+section_name+'">'+section_name+'</option>');
 						});
 					});
 				}
@@ -80,7 +87,7 @@
 						},
 						data: oPraparedConfigForConfigTable,
 						"displayLength": 100,
-                                                "ordering": false,
+						"ordering": false,
 						"columns": [
 							{"data": "section", "title": "Sektion", "visible": false},
 							{"data": "key", "title": "Schlüssel"},
@@ -116,7 +123,7 @@
                     oConfigTable.fnFilter('basics')
 				}
 
-                                function addConfigSectionButtons(data) {
+                function addConfigSectionButtons(data) {
 					$('#ConfigButtons').empty()
 					Object.entries(data).forEach( section => {
 						var element = document.createElement("button");
@@ -124,10 +131,26 @@
 						element.setAttribute("name", section[0]);
 						element.setAttribute("class", "section btn btn-primary btn-sm")
 						element.setAttribute("style", "margin:5px;")
-                                                element.setAttribute("target", "description")
+                        element.setAttribute("target", "description")
 						element.setAttribute("id", 'ConfigSection');
  						$('#ConfigButtons').append(element);
 					});
+				}
+
+				function AddActionSelection (anchor) {
+					var html = '';
+					html += '<label id="idNewConfigValueLabel">Action/Command</label>'
+					html += '<div class="input-group" id="idConfigValueRow">';
+					html += '<select class="form-control" id="idConfigActionSelectVal"><option value="[NONE]">Action</option></select>';
+					html += '<span class="input-group-addon select-action"><input placeholder="Command" class="cmd" id="idConfigCommandInputVal"></span>';
+					html += '</div>';
+					anchor.append(html);
+					$.getJSON("/control/get_actions", function(result) {
+						var actions = result.message
+						actions.forEach( function(action, index, array) {
+							$('#idConfigActionSelectVal').append('<option value="'+action+'">'+action+'</option>');
+						})
+					})
 				}
 
 				$(document).ready(function() {
@@ -147,7 +170,7 @@
 						</div>
 						<!-- /.panel-heading -->
 						<div class="panel-body">
-							Hier kann die aktuelle Konfiguration eingesehen und geändert werden. Eine Inline-Bearbeitung ist in Arbeit.
+							Hier kann die aktuelle Konfiguration eingesehen und geändert werden.
 						</div>
 						<!-- /.panel-body -->
 						<div class="panel-footer">
@@ -159,22 +182,30 @@
 											<h4 class="modal-title" id="idNewConfigModalLabel">New Config Key</h4>
 										</div>
 										<div class="modal-body" id="idNewConfigModalBody">
-											<div class="alert" style="display: none;" id="idNewConfigResponse"></div>
-											<div class="form-group">
+											<div class="alert" id="idNewConfigResponse"></div>
+											<div class="form-group" id="idNewConfigSection" >
 												<label>Section Name</label>
-												<select class="form-control" id="idNewConfigSectionSelectVal"></select>
+												<select class="form-control" id="idNewConfigSectionSelectVal">
+													<option value="[NONE]">Select section</option>
+												</select>
 											</div>
 											<div class="form-group" id="idNewConfigSectionInput" style="display: none;">
 												<label>Section Name (new)</label>
 												<input class="form-control" placeholder="Enter name of new section" id="idNewConfigSectionInputVal">
 											</div>
-											<div class="form-group" id="idNewConfigKeyInput">
-												<label>Keyname</label>
-												<input class="form-control" placeholder="Enter name of new key" id="idNewConfigKeyInputVal">
+											<div class="form-group" id="idNewConfigKeyboardInput">
+												<label id="idNewConfigKeyboardLabel">Keyboard Name </label>
+												<input class="form-control" placeholder="Which Keyboard?" id="idNewConfigKeyboardInputVal">
 											</div>
-											<div class="form-group" id="idNewConfigValueInput">
-												<label>Value (one line each for list entries [+]) </label>
-												<input class="form-control" placeholder="Enter the new value" id="idNewConfigValueInputVal">
+											<div class="form-group" id="idNewConfigKeyInput">
+												<label id="NewConfigKeyLabel">Keyname</label>
+												<select class="form-control" id="idNewConfigKeySelectVal">
+													<option value="[NONE]">Select section first</option>
+												</select>
+											</div>
+											<div class="form-group" id="idNewConfigPinInput">
+												<label id="idNewConfigPinLabel">Pin/Input</label>
+												<input class="form-control" placeholder="Which Pin/input?" id="idNewConfigPinInputVal">
 											</div>
 											<div id="idAdditionalNewConfigInputRows"></div>
 											<span>
@@ -183,19 +214,17 @@
 											</span>
 											<script>
 												$("#addNewConfigRow").click( function () {
-													var html = '';
-													html += '<div id="idAddedInputRows">';
-													html += '<div class="form-group">';
-													html += '<input type="text" name="title[]" class="form-control m-input" placeholder="Enter additional list value">';
-													html += '</div>';
-													html += '</div>';
+													var currentCount =  $('#idAdditionalNewConfigInputRows').length;
+													var newCount = currentCount+1;
+													var lastRepeatingGroup = $('#idConfigValueRow').last();
+													var newSection = lastRepeatingGroup.clone();
+													newSection.insertAfter(lastRepeatingGroup);
 													$('#removeNewConfigRow').css('visibility', 'visible')
-													$('#idAdditionalNewConfigInputRows').append(html);
 												});
 
 												$("#removeNewConfigRow").click( function () {
 													$("#idAdditionalNewConfigInputRows").children().last().remove();
-													if ($('#idAdditionalNewConfigInputRows').children().length == 0) {
+													if ($('#idAdditionalNewConfigInputRows').children().length == 2) {
 														$('#removeNewConfigRow').css('visibility', 'hidden')
 													}
 												});
@@ -210,22 +239,117 @@
 														.val('[NONE]')
 													;
 													$("#idNewConfigSectionInputVal").val('');
-													$("#idNewConfigKeyInputVal").val('');
-													$("#idNewConfigValueInputVal").val('');
-													$("#idAdditionalNewConfigInputRows").empty();
-													$('#removeNewConfigRow').css('visibility', 'hidden')
+													ResetNewConfigKey();
 												}
+
+												function ResetNewConfigKey () {
+													$("#NewConfigKeyLabel").text("Keyname");
+													$("#idNewConfigKeySelectVal").val('');
+													$('#removeNewConfigRow').css('visibility', 'hidden');
+													$('#addNewConfigRow').css('visibility', 'hidden');
+													$('#idNewConfigKeyboardInput').css('display', 'none');
+													$("#idNewConfigKeyboardInputVal").val('');
+													ResetNewConfigKeyboard();
+												}
+
+												function ResetNewConfigKeyboard () {
+													$("#idNewConfigValueInputVal").val('');
+													$("#idNewConfigValueInputVal").val('');
+													$('#idNewConfigKeyboardLabel').text('Keyboard Name ');
+													$("#idAdditionalNewConfigInputRows").empty();
+													$('#idNewConfigPinInput').css('display', 'none');
+													$("#idNewConfigPinInputVal").val('');
+												}
+
 												function PrepareNewConfigModal () {
 													$("#idNewConfigSectionSelectVal").change(function() {
+														ResetNewConfigKey();
+														$('#idNewConfigKeySelectVal').find('option').remove();
 														if ($("#idNewConfigSectionSelectVal").val() == "[NEW]") {
 															$("#idNewConfigSectionInput").fadeIn("slow");
 														} else {
 															$("#idNewConfigSectionInput").fadeOut("slow");
 														}
+
+														if ($("#idNewConfigSectionSelectVal").val() == "[NONE]") {
+															$('#idNewConfigKeySelectVal')
+																.find('option')
+																.append('<option value="[NONE]">Select section first</option>')
+																.val('[NONE]')
+																.attr('disabled', 'disabled')
+															;
+														} else if ($("#idNewConfigSectionSelectVal").val() == "events") {
+															$("#NewConfigKeyLabel").text("Eventname")
+															$.getJSON("/status?module=event_handler&name=events&output=json", function(result) {
+																var events = result.event_handler.events
+																for (const event in events) {
+																	if (!(event.startsWith("OnTime")) && !(event.startsWith("OnKey"))) {
+																		$('#idNewConfigKeySelectVal').append('<option value="'+"".concat($("#idNewConfigSectionSelectVal").val(),".", event)+'">'+event+'</option>');
+																	}
+																}
+															})
+														} else if ($("#idNewConfigSectionSelectVal").val() == "keyboard") {
+															let keyboards = []
+															$.each(Object.keys(oConfigObject[$("#idNewConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
+																kb = key_name.split(".")[1]
+																if (kb !== "*" && !keyboards.includes(kb)) {
+																	keyboards.push(kb)
+																}
+															});
+															$("#idNewConfigKeyboardInput").css('display', 'block')
+															if (keyboards.length !== 0) {
+																$("#idNewConfigKeyboardLabel").append("(existing: "+keyboards+")")
+															}
+
+														} else {
+															$.each(Object.keys(oConfigObject[$("#idNewConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
+																if (key_name.includes("*")) {
+																	if ((pos = key_name.indexOf(".")) != -1) {
+																		var key = [key_name.slice(0,pos), key_name.slice(pos+1)][1]
+																	} else {
+																		var key = key_name
+																	}
+																	$('#idNewConfigKeySelectVal').append('<option value="'+key_name+'">'+key+'</option>');
+																}
+															});
+														}
+													});
+
+													$("#idNewConfigKeySelectVal").change( function() {
+														ResetNewConfigKeyboard();
+														$('#addNewConfigRow').css('visibility', 'visible');
+														if ($("#idNewConfigSectionSelectVal").val() == "events" || $('#idNewConfigKeySelectVal option:selected').text() == 'input') {
+															if ($('#idNewConfigKeySelectVal option:selected').text() == 'input') {
+																$('#idNewConfigPinInput').css('display', 'block')
+															}
+															AddActionSelection($('#idAdditionalNewConfigInputRows'))
+														} else {
+															var html = '';
+															html += '<label id="idNewConfigValueLabel">Value</label>'
+															html += '<div class="form-group" id="idConfigValueRow">';
+															html += '<input class="form-control" id="idConfigCommandInputVal">';
+															html += '</div>';
+															$('#idAdditionalNewConfigInputRows').append(html)
+														}
+													});
+
+													$("#idNewConfigKeyboardInputVal").change( function() {
+														$.each(Object.keys(oConfigObject[$("#idNewConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
+															key = key_name.split(".")[2]
+															key_name = key_name.replace("*", $("#idNewConfigKeyboardInputVal").val())
+															$('#idNewConfigKeySelectVal').append('<option value="'+key_name+'">'+key+'</option>');
+														});
+													});
+
+													$("#idNewConfigPinInputVal").change( function() {
+														key = $('#idNewConfigKeySelectVal option:selected').val()
+														key = key.replace("*", $(this).val())
+														$('#idNewConfigKeySelectVal option:selected').val(key)
 													});
 
 													$("#idNewConfigModalClose").click( function () {
-														ResetNewConfigModal()
+														ResetNewConfigModal();
+														ReloadConfigData();
 													});
 
 													$("#idNewConfigModalButtonSave").click(function() {
@@ -237,17 +361,26 @@
 															sSectionName = $("#idNewConfigSectionSelectVal").val();
 														}
 														// get the values from added forms
-														var value = $("#idNewConfigValueInputVal").val()
-														if ($('#idAdditionalNewConfigInputRows').children().length !== 0) {
+														let values = []
+														// label is a child
+														if ($('#idAdditionalNewConfigInputRows').children().length !== 1) {
 															$('#idAdditionalNewConfigInputRows').children().each( function () {
-																var val = $(this).find("input").val()
-																if (val !== "") {
-																	value += '|'+val
+																var var1 = $(this).find("input").val();
+																var var2 = $(this).find("select").val();
+																if (var1 == undefined) {
+																	return;
+																} else if (var2 !== undefined && var2 !== "[None]") {
+																	values.push(var2+':'+var1);
+																} else {
+																	values.push(var1);
 																}
 															})
 														}
+														// TODO join them based of type
+														let value = values.join("|");
+
 														sNewConfigUrl += "?section=" + encodeRFC5987ValueChars(sSectionName);
-														sNewConfigUrl += "&key=" + encodeRFC5987ValueChars("".concat(sSectionName, ".", $("#idNewConfigKeyInputVal").val()));
+														sNewConfigUrl += "&key=" + encodeRFC5987ValueChars($("#idNewConfigKeySelectVal").val());
 														sNewConfigUrl += "&value=" + encodeRFC5987ValueChars(value);
 
 														$.getJSON(sNewConfigUrl, function(result){
@@ -258,7 +391,7 @@
 															} else {
 																$("#idNewConfigResponse").removeClass('alert-success').addClass("alert-danger");
 															}
-															$("#idNewConfigResponse").html(result.message).fadeIn("slow");
+															$("#idNewConfigResponse").html(result.message).fadeIn("slow").delay(5000).fadeOut();
 														});
 													});
 												};
@@ -347,7 +480,7 @@
 
 												function LoadOldValueBeforeEdit() {
 													try {
-														$('#idEditConfigOldValue').text('  - old value is "'+oConfigObject[$("#idEditConfigSectionSelectVal").val()][$("#idEditConfigKeyInputVal").val()][0]);
+														$('#idEditConfigOldValue').text('- old value is "'+oConfigObject[$("#idEditConfigSectionSelectVal").val()][$("#idEditConfigKeyInputVal").val()][0]);
 														$("#idEditConfigValueInputVal").removeAttr('disabled');
 													}
 													catch(err) {
@@ -411,7 +544,7 @@
 															} else {
 																$("#idEditConfigResponse").removeClass('alert-success').addClass("alert-danger");
 															}
-															$("#idEditConfigResponse").html(result.message).fadeIn("slow");
+															$("#idEditConfigResponse").html(result.message).fadeIn("slow").delay(5000).fadeOut();
 														});
 													});
 												};
@@ -518,7 +651,7 @@
 															} else {
 																$("#idDeleteConfigResponse").removeClass('alert-success').addClass("alert-danger");
 															}
-															$("#idDeleteConfigResponse").html(result.message).fadeIn("slow");
+															$("#idDeleteConfigResponse").html(result.message).fadeIn("slow").delay(5000).fadeOut();
 														});
 													});
 												};
@@ -582,7 +715,7 @@
 															} else {
 																$("#idSaveConfigResponse").removeClass('alert-success').addClass("alert-danger");
 															}
-															$("#idSaveConfigResponse").html(result.message).fadeIn("slow");
+															$("#idSaveConfigResponse").html(result.message).fadeIn("slow").delay(5000).fadeOut();
 														});
 													});
 												};

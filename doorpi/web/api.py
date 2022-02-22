@@ -2,6 +2,7 @@
 import json
 import enum
 import pathlib
+import importlib
 from urllib.parse import unquote
 import textwrap
 import typing as T
@@ -38,6 +39,16 @@ async def _control_trigger_event(
         {"success": True, "message": "Event was fired"},
         dumps=json_encoder.encode,
     )
+
+
+@routes.get("/control/get_actions")
+async def _control_trigger_event(
+    request: aiohttp.web.BaseRequest,
+) -> aiohttp.web.StreamResponse:
+    return aiohttp.web.json_response(
+            {"success": True, "message": [i.name for i in importlib.metadata.entry_points()["doorpi.actions"]]},
+            dumps=json_encoder.encode,
+        )
 
 
 @routes.get("/control/config_get_config")
@@ -92,6 +103,20 @@ async def _control_configvalue_set(
         or request.can_read_body
     ):
         raise aiohttp.web.HTTPBadRequest()
+
+    # if action try if it is loadable
+    _actions = [i.name for i in importlib.metadata.entry_points()["doorpi.actions"]]
+    _cmds = unquote(request.query["value"]).split("|")
+    for _cmd in _cmds:
+        _action = _cmd.split(":")[0]
+        if _action in _actions:
+            try:
+                _test = doorpi.actions.from_string(_cmd)
+            except (IndexError, KeyError, TypeError, ValueError) as err:
+                return aiohttp.web.json_response(
+                    {"success": False, "message": f"{type(err).__name__}: {err}"},
+                    dumps=json_encoder.encode,
+                )
 
     try:
         doorpi.INSTANCE.config[request.query["key"]] = unquote(request.query["value"])

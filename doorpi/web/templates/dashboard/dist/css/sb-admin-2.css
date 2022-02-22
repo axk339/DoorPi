@@ -426,6 +426,30 @@ p.dl-300 {
     visibility: hidden;
 }
 
+#addNewConfigRow {
+    visibility: hidden;
+}
+
+#idNewConfigKeyboardInput {
+    display: none;
+}
+
+#idNewConfigPinInput {
+    display: none;
+}
+
+#idNewConfigResponse {
+    display: none;
+}
+
 .btn-xs-20 {
     width: 20px;
+}
+
+.select-action {
+    width: 80%;
+}
+
+.cmd {
+    width: 100%;
 }
