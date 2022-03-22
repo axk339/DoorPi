@@ -54,7 +54,7 @@ class PifaceKeyboard(AbstractKeyboard):
         INSTANTIATED = False
         super().destroy()
 
-    def event_detect(self, event: pifacecommon.InterruptEvent) -> None:
+    def event_detect(self, event: pifacecommon.interrupts.InterruptEvent) -> None:
         """Callback from PifaceDigitalIO library"""
         if self.input(event.pin_num):
             self._fire_keydown(event.pin_num)
