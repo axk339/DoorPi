@@ -294,7 +294,7 @@ do
                     (/usr/local is recommended atm)''' 9 50 '' 3>&2 2>&1 1>&3
                 )
                 prepare_install "$PREFIX"
-                sudo python3 -m pip install . --prefix $PREFIX | dialog --progressbox 30 100
+                sudo python3 -m pip install . --prefix $PREFIX --ignore-installed PyYAML | dialog --progressbox 30 100
 	            ;;
 
             "20")
