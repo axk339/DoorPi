@@ -326,14 +326,12 @@ class DoorPi:
             if isinstance(val, str):
                 mapping_table[key.upper()] = val
 
-        if self.config:
-            mapping_table.update(
-                {
-                    "LAST_SNAPSHOT": str(
-                        doorpi.actions.snapshot.SnapshotAction.list_all()[-1]
-                    ),
-                }
-            )
+        __snaps = doorpi.actions.snapshot.SnapshotAction.list_all()
+        mapping_table.update(
+            {
+                "LAST_SNAPSHOT": str(__snaps[-1]) if __snaps else ""
+            }
+        )
 
         if self.keyboard:
             mapping_table.update(self.keyboard.enumerate_outputs())
