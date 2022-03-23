@@ -35,12 +35,13 @@ class PifaceKeyboard(AbstractKeyboard):
 
         pifacedigitalio.init()
         self.__listener = pifacedigitalio.InputEventListener()
+        self._inputs = [int(i) for i in self._inputs if i.isdigit()]  # type: list[int]
         for input_pin in self._inputs:
             self.__listener.register(
                 pin_num=input_pin,
                 direction=pifacedigitalio.IODIR_BOTH,
                 callback=self.event_detect,
-                settle_time=self._bouncetime / 1000,
+                settle_time=self._bouncetime.seconds / 1000,
             )
         self.__listener.activate()
 
