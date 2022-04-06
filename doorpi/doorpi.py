@@ -25,7 +25,7 @@ import doorpi.status.systemd
 import doorpi.web
 
 LOGGER: doorpi.DoorPiLogger = logging.getLogger(__name__)  # type: ignore
-DEADLY_SIGNALS_ABORT = 3
+DEADLY_SIGNALS_ABORT = 2
 
 if __name__ == "__main__":
     raise Exception("use main.py to start DoorPi")
