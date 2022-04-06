@@ -171,9 +171,9 @@ _type = "bool"
 _default = false
 
 [config.sipphone.video.device]
-_description = "The video device to use"
-_type = "string"
-_default = ""
+_description = "The video device to use (number known to pjsua2; check the logs)"
+_type = "int"
+_default = 0
 
 [config.sipphone.video.resolution]
 _description = "Resolution of the video stream"

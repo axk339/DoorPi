@@ -40,6 +40,8 @@ class Worker:
             pj.PJSIP_TRANSPORT_UDP, config.transport_config()
         )
         config.setup_audio(self.__ep)
+        if self.__config["video.enabled"]:
+            config.list_video_devices(self.__ep, logging.CRITICAL)
         self.__ep.libStart()
 
         LOGGER.debug("Creating account")

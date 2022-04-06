@@ -89,9 +89,9 @@ class CallCallback(pj.Call):
         ci = self.getInfo()
         for i in range(len(ci.media)):
             if ci.media[i].type == pj.PJMEDIA_TYPE_AUDIO and audio is None:
-                audio = pj.AudioMedia.typecastFromMedia(self.getMedia(i))
+                audio = self.getAudioMedia(i)
             if ci.media[i].type == pj.PJMEDIA_TYPE_VIDEO and video is None:
-                video = pj.VideoMedia.typecastFromMedia(self.getMedia(i))
+                video = self.vidStreamIsRunning(i, pj.PJMEDIA_DIR_CAPTURE)
         return (audio, video)
 
     def onCallState(self, prm: pj.OnCallStateParam) -> None:
@@ -161,9 +161,14 @@ class CallCallback(pj.Call):
             return
 
         adm = pj.Endpoint.instance().audDevManager()
+        vdm = pj.Endpoint.instance().videoDevManager()
         LOGGER.debug("Call to %r: media changed", ci.remoteUri)
-        audio, _ = self.__getAudioVideoMedia()
+        audio, video = self.__getAudioVideoMedia()
 
+        if not video:
+            __params = pj.CallVidSetStreamParam()
+            __params.dir = pj.PJMEDIA_DIR_CAPTURE
+            self.vidSetStream(pj.PJSUA_CALL_VID_STRM_ADD, __params)
         if audio:
             # Connect call audio to speaker and microphone
             audio.startTransmit(adm.getPlaybackDevMedia())

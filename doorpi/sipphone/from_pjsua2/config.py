@@ -48,6 +48,12 @@ def account_config() -> pj.AccountConfig:
     acfg.regConfig.registrarUri = f"sip:{sip_server}"
     acfg.regConfig.registerOnAdd = True
 
+    if doorpi.INSTANCE.config["sipphone.video.enabled"]:
+        acfg.videoConfig.autoShowIncoming = False
+        acfg.videoConfig.defaultCaptureDevice = doorpi.INSTANCE.config["sipphone.video.device"]
+        acfg.videoConfig.autoTransmitOutgoing = True
+        acfg.mediaConfig.vidPreviewEnableNative = False
+
     authCred = pj.AuthCredInfo()
     authCred.scheme = "digest"
     authCred.realm = sip_realm
@@ -130,6 +136,17 @@ def list_audio_devices(adm: pj.AudDevManager, loglevel: int) -> None:
     devs = adm.enumDev2()
     for dev in devs:
         LOGGER.log(loglevel, "   %s:%s", dev.driver, dev.name)
+
+
+def list_video_devices(endpoint: pj.Endpoint, loglevel: int) -> None:
+    """Logs the video devices known to the endpoints ``video device manager`` with the given ``loglevel``."""
+    if not LOGGER.isEnabledFor(loglevel):
+        return
+    vdm = endpoint.vidDevManager()
+    LOGGER.log(loglevel, "Video Devices:")
+    for i in range(1, vdm.getDevCount() + 1):
+        _dev = vdm.getDevInfo(i)
+        LOGGER.log(loglevel, "   ID:%s %s:%s", _dev.id, _dev.driver, _dev.name)
 
 
 def setup_audio(endpoint: pj.Endpoint) -> None:
