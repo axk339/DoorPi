@@ -50,7 +50,9 @@ def account_config() -> pj.AccountConfig:
 
     if doorpi.INSTANCE.config["sipphone.video.enabled"]:
         acfg.videoConfig.autoShowIncoming = False
-        acfg.videoConfig.defaultCaptureDevice = doorpi.INSTANCE.config["sipphone.video.device"]
+        _vid_dev = doorpi.INSTANCE.config["sipphone.video.device"]
+        if _vid_dev > -1:
+            acfg.videoConfig.defaultCaptureDevice = _vid_dev
         acfg.videoConfig.autoTransmitOutgoing = True
         acfg.mediaConfig.vidPreviewEnableNative = False
 
@@ -138,11 +140,10 @@ def list_audio_devices(adm: pj.AudDevManager, loglevel: int) -> None:
         LOGGER.log(loglevel, "   %s:%s", dev.driver, dev.name)
 
 
-def list_video_devices(endpoint: pj.Endpoint, loglevel: int) -> None:
+def list_video_devices(vdm: pj.VidDevManager, loglevel: int) -> None:
     """Logs the video devices known to the endpoints ``video device manager`` with the given ``loglevel``."""
     if not LOGGER.isEnabledFor(loglevel):
         return
-    vdm = endpoint.vidDevManager()
     LOGGER.log(loglevel, "Video Devices:")
     for i in range(1, vdm.getDevCount() + 1):
         _dev = vdm.getDevInfo(i)
@@ -157,6 +158,13 @@ def setup_audio(endpoint: pj.Endpoint) -> None:
     setup_audio_volume(adm)
     setup_audio_codecs(endpoint)
     setup_audio_echo_cancellation(adm)
+
+
+def setup_video(endpoint: pj.Endpoint) -> None:
+    """Sets up everything video on the given endpoint."""
+    vdm = endpoint.vidDevManager()
+    list_video_devices(vdm, logging.INFO)
+    setup_video_codecs(endpoint)
 
 
 def setup_audio_devices(adm: pj.AudDevManager) -> None:
@@ -276,6 +284,46 @@ def setup_audio_echo_cancellation(adm: pj.AudDevManager) -> None:
     else:
         LOGGER.trace("Disabling echo cancellation")
         adm.setEcOptions(0, 0)
+
+
+def setup_video_codecs(endpoint: pj.Endpoint) -> None:
+    """Configures the enabled video codecs in PJSUA2."""
+    allcodecs = endpoint.videoCodecEnum2()
+    LOGGER.debug(
+        "Supported video codecs: %s", ", ".join(c.codecId for c in allcodecs)
+    )
+    confcodecs = doorpi.INSTANCE.config["sipphone.video.codecs"]
+    if not confcodecs:
+        LOGGER.info("No codec priority configured. Will run with the default priorities.")
+        return
+    if not allcodecs:
+        LOGGER.error("PJSUA2 couldn't find any capable video codecs")
+        return
+
+    confcodecs = [c.strip().lower() for c in confcodecs]
+    _priority_changed = False
+    for codec in allcodecs:
+        # In PJSIP, video codecs follow the format "codec/num".
+        ci = codec.codecId.lower()
+        cn = ci.split("/")[0]
+        try:
+            i = confcodecs.index(cn)
+        except ValueError:
+            continue
+        new_priority = 255 - i  # 255 = highest priority
+        _priority_changed = True
+        LOGGER.debug(
+            "Changing priority of codec %s from %d to %d",
+            codec.codecId,
+            codec.priority,
+            new_priority,
+        )
+        endpoint.videoCodecSetPriority(codec.codecId, new_priority)
+    if not _priority_changed:
+        LOGGER.error(
+            "Configured codecs (%s) aren't supported. Will run with the default priorities.",
+            ', '.join(confcodecs)
+        )
 
 
 # pylint: disable=too-few-public-methods

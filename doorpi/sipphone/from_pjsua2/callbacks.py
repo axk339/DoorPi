@@ -161,10 +161,11 @@ class CallCallback(pj.Call):
             return
 
         adm = pj.Endpoint.instance().audDevManager()
-        vdm = pj.Endpoint.instance().videoDevManager()
+        vdm = pj.Endpoint.instance().vidDevManager()
         LOGGER.debug("Call to %r: media changed", ci.remoteUri)
         audio, video = self.__getAudioVideoMedia()
 
+        #TODO check if params changed?
         if not video:
             __params = pj.CallVidSetStreamParam()
             __params.dir = pj.PJMEDIA_DIR_CAPTURE
