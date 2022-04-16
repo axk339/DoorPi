@@ -79,7 +79,7 @@ class CallCallback(pj.Call):
         self.__possible_dtmf = doorpi.INSTANCE.config.view(
             "sipphone.dtmf"
         ).keys()
-        self.__fire_disconnect = False
+        self.__call_answered = False
 
     def __getAudioVideoMedia(self) -> Tuple[pj.AudioMedia, pj.VideoMedia]:
         """Helper function that returns the first audio and video media"""
@@ -108,7 +108,7 @@ class CallCallback(pj.Call):
             LOGGER.debug("Call to %r is now connecting", ci.remoteUri)
         elif ci.state == pj.PJSIP_INV_STATE_CONFIRMED:
             LOGGER.info("Call to %r was accepted", ci.remoteUri)
-            self.__fire_disconnect = True
+            self.__call_answered = True
             with sp._call_lock:
                 prm = pj.CallOpParam()
                 if sp.current_call is not None:
@@ -130,25 +130,23 @@ class CallCallback(pj.Call):
                 ci.connectDuration.sec,
                 ci.totalDuration.sec,
             )
-            with sp._call_lock:
-                if sp.current_call == self:
-                    sp.current_call = None
-                elif self in sp._ringing_calls:
-                    sp._ringing_calls.remove(self)
+            if sp.current_call == self:
+                sp.current_call = None
+                LOGGER.trace(
+                    "Firing disconnect event for call to %r", ci.remoteUri
+                )
+                fire_event("OnCallDisconnect", remote_uri=ci.remoteUri)
+            elif self in sp._ringing_calls:
+                sp._ringing_calls.remove(self)
 
-                if self.__fire_disconnect:
-                    LOGGER.trace(
-                        "Firing disconnect event for call to %r", ci.remoteUri
-                    )
-                    fire_event("OnCallDisconnect", remote_uri=ci.remoteUri)
-                elif len(sp._ringing_calls) == 0:
-                    LOGGER.info("No call was answered")
-                    fire_event("OnCallUnanswered")
-                else:
-                    LOGGER.trace(
-                        "Skipping disconnect event for call to %r",
-                        ci.remoteUri,
-                    )
+            if len(sp._ringing_calls) == 0 and not self.__call_answered:
+                LOGGER.info("No call was answered")
+                fire_event("OnCallUnanswered")
+            else:
+                LOGGER.trace(
+                    "Skipping disconnect event for call to %r",
+                    ci.remoteUri,
+                )
         else:
             LOGGER.warning(
                 "Call to %r: unknown state %d", ci.remoteUri, ci.state
