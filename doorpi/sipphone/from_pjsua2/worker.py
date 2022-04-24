@@ -181,6 +181,9 @@ class Worker:
         if len(self.__phone._waiting_calls) == 0:
             return
 
+        if doorpi.INSTANCE.videoserver and not doorpi.INSTANCE.videoserver.is_transcoding:
+            doorpi.INSTANCE.videoserver.start_transcode()
+
         with self.__phone._call_lock:
             for uri in self.__phone._waiting_calls:
                 LOGGER.info("Calling %s", uri)

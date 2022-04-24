@@ -1,0 +1,30 @@
+[config.videoserver.enabled]
+_description = "A video server acting as an input for sipphone video"
+_type = "bool"
+_default = false
+
+[config.videoserver.server]
+_description = "The FULL address of the server (ie <transport/codec>://<ip>:<port>/[<path_to_output>])"
+_type = "string"
+_default = ""
+
+[config.videoserver.device]
+_description = "The file/device (loopback device) the video stream is transcoded to"
+_type = "string"
+_default = "/dev/video0"
+
+[config.videoserver.delay]
+_description = "The call will be delayed X sec for the transcoding to ramp up (for reference: Rpi3 approx. 8 sec - the default) "
+_type = "int"
+_default = 8
+_min = 0
+
+[config.videoserver.input_arguments]
+_description = "FFmpeg specific. Streams in need of a different input arguments drop it here (eg. pix_fmt=yuv,r=30,vcodev=copy,...)"
+_type = "string"
+_default = ""
+
+[config.videoserver.output_arguments]
+_description = "FFmpeg specific. Streams in need of a different output arguments drop it here (eg. pix_fmt=yuv,r=30,vcodev=copy,...)"
+_type = "string"
+_default = ""

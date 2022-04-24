@@ -112,6 +112,7 @@ class DoorPi:
         self.keyboard = None  # type: ignore
         self.sipphone = None  # type: ignore
         self.webserver = None
+        self.videoserver = None  # type: ignore
 
         self.__deadlysignals = 0
         self.__prepared = False
@@ -168,6 +169,12 @@ class DoorPi:
         self.event_handler.register_action(
             "OnTimeTick", f"time_tick:{self.__last_tick}"
         )
+
+        # init videoserver (and start transcoding to get registered by sipphone)
+        # the transcoding will be stopped short after and restarted on new calls
+        if self.config["videoserver.enabled"]:
+            self.videoserver = doorpi.sipphone.videoserver.Videoserver()
+            self.videoserver.start_transcode()
 
         # register modules
         self.webserver = doorpi.web.load()  # pylint: disable=E1111, E1128
@@ -228,7 +235,7 @@ class DoorPi:
             )
 
         # unregister modules
-        self.sipphone = self.keyboard = self.webserver = None  # type: ignore
+        self.sipphone = self.keyboard = self.webserver = self.videoserver = None  # type: ignore
         self.__prepared = False
 
         doorpi.INSTANCE = None  # type: ignore

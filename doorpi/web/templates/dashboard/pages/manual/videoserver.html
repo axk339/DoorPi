@@ -1,0 +1,42 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="/dashboard/dist/css/sb-admin-2.css" />
+    </head>
+    <body>
+        <div class="desc-body">
+
+            <p class="desc-heading">Defines a videoserver usable to doorpi. The main goal is to transcode a (rtsp/tcp/udp/http/device/file) video feed to a loopback device the sipphone is able to pick up.  </p>
+            <p>The videoserver is implemented for various scenarios: </p>
+            <ul>
+                <li>Users wanting to use the modules’ video stream elsewhere outside of doorpi. (“one process limitation”)</li>
+                <li>Same applies to additional internal actions/events/processes </li>
+                <li>Hook in a video stream where a direct connection is not feasible</li>
+                <li>The video device is not capable/configurable to send correct format to be picked up by the running sipphone </li>
+                <li>...</li>
+            </ul>
+            <p>The videoserver is only needed in circumstances where the (external) source is </p>
+            <ul>
+                <li>not reachable by udev (sipphone limitations /dev/video0-3)</li>
+                <li>needs to be transcoded into an appropriate format </li>
+            </ul>
+            <br>
+            <p>To check if the source – lets say a USB webcam directly connected – is readable, check the internal logs</p>
+            <div class="panel-red">
+                <a><pre>[INFO]          [doorpi.sipphone.from_pjsua2.config] Video Devices:</pre></a>
+                <a><pre>[INFO]          [doorpi.sipphone.from_pjsua2.config]    ID:0 v4l2:VirtualDoorpiCam #0  <----- this is the (default) loopback device</pre></a>
+            </div>
+            <p>If it is showing up, just drop the id number under the config module sipphone >> video.device (there is no need to enable the videoserver in that case).</p>
+            <p>On the other hand if the device is not on that list, your device/stream is not readable in this state. Try to use the videoserver/transcoding functionality by configuring (web) </p>
+            <p>Edit config key >> Videoserver >></p>
+            <dl>
+                <dt class="dl-mirrored dl-400"><span class="command">enabled</span></dt> <dd class="dl-400 hv">true</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">server</span></dt> <dd class="dl-400 hv">device or server adress</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">device</span></dt> <dd class="dl-400 hv">the device transcoded to (only if not /dev/video0)</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">input_arguments</span></dt> <dd class="dl-400 hv"><span>If this feed needs some special aguments to be transcoded by ffmped drop it here in the form of </span><span class="bold">arg1=val1,arg2,arg3=’val 3’</span>
+                <span>. Same applies to ‘output_arguments’. With using the standard rpi video module there is usually no need to define custom arguments (at least output arguments)</span></dd>
+                <dt class="dl-mirrored dl-400"><span class="command">delay</span></dt> <dd class="dl-400 hv">to reduce ressource consumption, transcoding only takes place during bootup or calls been placed (ie doorpi rings). FFmpeg needs some time to ramp up to be seemlessly been picked up by the sipphone.
+                Rpi3: 8sec (safe value) - this is the default</dd>
+            </dl>
+        </div>
+    </body>
+</html>
