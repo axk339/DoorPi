@@ -185,7 +185,7 @@ _default = "vga"
 _description = "Video stream encoding to use (prioritized)"
 _type = "list"
 _membertype = "string"
-_default = ["vp8","h264"]
+_default = ["h264","vp8"]
 
 [config.sipphone.dtmf."*"]
 _description = "Actions to execute when receiving DTMF sequence {0}"
