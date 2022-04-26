@@ -115,7 +115,7 @@ class Float(ValueType):
         if isinstance(value, str):
             value = value.replace(",",".")
             if not len(value.split(".")) == 2 or \
-                    not any([i.isdigit() for i in value.split(".")]):
+                    not all([i.isdigit() for i in value.split(".")]):
                 raise TypeError(f"Needed a float, got {value!r}")
         value = float(value)
 
