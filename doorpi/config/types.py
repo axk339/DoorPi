@@ -110,11 +110,18 @@ class Float(ValueType):
 
     def insertcast(self, value: Any) -> float:
         # pylint: disable=no-member
-        if isinstance(value, (int, float)):
-            if self.__min <= value <= self.__max:
-                return float(value)
-            raise ValueError(f"Number out of range: {value!r}")
-        raise TypeError(f"Needed a number, got {value!r}")
+        if not isinstance(value, (int, float, str)):
+            raise TypeError(f"Needed a float, got {value!r}")
+        if isinstance(value, str):
+            value = value.replace(",",".")
+            if not len(value.split(".")) == 2 or \
+                    not any([i.isdigit() for i in value.split(".")]):
+                raise TypeError(f"Needed a float, got {value!r}")
+        value = float(value)
+
+        if self.__min <= value <= self.__max:
+            return value
+        raise ValueError(f"float out of range: {value!r}")
 
     def __str__(self):
         return __class__.__name__
