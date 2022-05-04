@@ -3,6 +3,7 @@
 
 import sys
 import datetime
+import subprocess
 import logging
 import pathlib
 from urllib.parse import urlparse
@@ -64,7 +65,7 @@ class SnapshotAction(Action):
         """Computes the next snapshot's path."""
 
         path = cls.get_full_path() / datetime.datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S.jpg"
+            "%Y-%m-%d_%H:%M:%S.jpg"
         )
         return path
 
@@ -122,7 +123,7 @@ class StreamSnapshotAction(SnapshotAction):
                 .filter('scale', self.width or -1, -1)
                 .output(__outfile, vframes=1)
                 .overwrite_output()
-                .run(capture_stdout=True, capture_stderr=True)
+                .async_run(pipe_stdin=subprocess.DEVNULL, pipe_stdout=True, pipe_stderr=True)
             )
         except ffmpeg.Error as e:
             LOGGER.error(f"Can't make a snapshot: {e.stderr.decode()}")
