@@ -45,7 +45,7 @@ class MycroftConnect(object):
     def connections(self):
         return self._connections
 
-    def send_message(self, htype, mtype, text):
+    def send_message(self, htype="", mtype="", text=""):
         _valid_htypes = [m.value for m in HiveMessageType]
 
         if not htype:
@@ -87,6 +87,9 @@ class MycroftConnect(object):
             self.connected = self.host in self._connections
             for node in self.discovery.scan():
                 LOGGER.info("Fetching Node data: {name}, {url}".format(name=node.friendly_name, url=node.address))
+
+        if self.connected:
+            self.send_message(text="Doorpi connected")
 
         return self.connected
 
