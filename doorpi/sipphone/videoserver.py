@@ -27,6 +27,7 @@ class Videoserver(object):
         eh = doorpi.INSTANCE.event_handler
         eh.register_action("OnShutdown", CallbackAction(self.stop))
         eh.register_action("AfterStartup", CallbackAction(self.stop_transcode))
+        eh.register_action("OnCallUnanswered", CallbackAction(self.stop_transcode))
         eh.register_action("OnCallDisconnect", CallbackAction(self.stop_transcode))
 
     def _convert_kwargs(self, kwargs):
