@@ -1,6 +1,7 @@
 import logging
 
 import doorpi
+from doorpi.actions import CallbackAction
 
 from HiveMind_presence.discovery import LocalDiscovery
 from hivemind_bus_client.message import HiveMessage, HiveMessageType
@@ -20,6 +21,7 @@ class MycroftConnect(object):
         if cls._instance is None:
             LOGGER.debug("Creating new mycroft connect instance")
             cls._instance = cls.__new__(cls)
+            cls.discovery = None
             cls.bus = None
             cls.connected = False
 
@@ -29,10 +31,14 @@ class MycroftConnect(object):
             cls.__crypto_key = conf["crypto_key"]
             cls.host = conf["host"]
 
+            eh = doorpi.INSTANCE.event_handler
+            eh.register_action("OnShutdown", CallbackAction(cls._instance.stop_discovery))
+
         return cls._instance
 
     def connecting(self, node):
-        self.bus = node.connect(self.__access_key, crypto_key=self.__crypto_key)
+        if node.address == self.host:
+            self.bus = node.connect(self.__access_key, crypto_key=self.__crypto_key)
 
     @property
     def connections(self):
@@ -71,13 +77,19 @@ class MycroftConnect(object):
         return _ctxt
 
     def discover_hivemind(self):
-
-        discovery = LocalDiscovery()
-        discovery.on_new_node = self.connecting
+        self.discovery = LocalDiscovery()
+        self.discovery.on_new_node = self.connecting
         while not self.connected:
-            self._connections = list(discovery.nodes.keys())
+            self._connections = list(self.discovery.nodes.keys())
             self.connected = self.host in self._connections
-            for node in discovery.scan():
+            for node in self.discovery.scan():
                 LOGGER.info("Fetching Node data: {name}, {url}".format(name=node.friendly_name, url=node.address))
 
         return self.connected
+
+    def stop_discovery(self):
+        self.discovery.stop()
+        if not self.discovery.running:
+            LOGGER.info("Shut down Mycroft connection")
+        else:
+            LOGGER.error("Couldn't shut down Mycroft connection")
