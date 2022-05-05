@@ -9,6 +9,7 @@ from mycroft_bus_client import Message
 
 LOGGER = logging.getLogger(__name__)
 
+
 class MycroftConnect(object):
     """Singleton Class to spin up websocket connection to Mycroft instance"""
     _instance = None
@@ -78,6 +79,8 @@ class MycroftConnect(object):
 
     def discover_hivemind(self):
         self.discovery = LocalDiscovery()
+        # Turn off UPnP discovery (lots of traffic)
+        self.discovery.upnp = FakeUpnpScanner()
         self.discovery.on_new_node = self.connecting
         while not self.connected:
             self._connections = list(self.discovery.nodes.keys())
@@ -93,3 +96,14 @@ class MycroftConnect(object):
             LOGGER.info("Shut down Mycroft connection")
         else:
             LOGGER.error("Couldn't shut down Mycroft connection")
+
+
+class FakeUpnpScanner(object):
+    def __init__(self):
+        pass
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
