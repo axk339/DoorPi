@@ -2,7 +2,7 @@ import logging
 
 import doorpi
 
-from jarbas_hive_mind.discovery import LocalDiscovery
+from HiveMind_presence.discovery import LocalDiscovery
 from hivemind_bus_client.message import HiveMessage, HiveMessageType
 from mycroft_bus_client import Message
 
