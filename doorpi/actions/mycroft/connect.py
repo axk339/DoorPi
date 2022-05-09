@@ -8,7 +8,7 @@ from hivemind_bus_client.message import HiveMessage, HiveMessageType
 from mycroft_bus_client import Message
 
 LOGGER = logging.getLogger(__name__)
-
+SERVICES_WO_CALLBACK = ["speak"]
 
 class MycroftConnect(object):
     """Singleton Class to spin up websocket connection to Mycroft instance"""
@@ -49,9 +49,13 @@ class MycroftConnect(object):
         _valid_htypes = [m.value for m in HiveMessageType]
 
         if not htype:
-            htype = "bus"
-        elif htype.lower() not in _valid_htypes:
+            htype = HiveMessageType.BUS
+        elif htype.lower() in _valid_htypes:
+            htype = HiveMessageType(htype)
+        else:
             LOGGER.error(f"The first message type has to be one of {_valid_htypes}")
+
+        # message type for mycroft is pretty much a free for all, default to speech service
         if not mtype:
             mtype = "speak"
         else:
@@ -64,7 +68,13 @@ class MycroftConnect(object):
 
         received = None
         if self.bus is not None and self.connected:
-            received = self.bus.wait_for_response(message)
+            if mtype not in SERVICES_WO_CALLBACK:
+                received = self.bus.wait_for_payload_response(message,
+                                                              payload_type=f"{mtype}.reply")
+            # no callback possible
+            else:
+                self.bus.emit(message)
+                received = True
 
         return received
 
