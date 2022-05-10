@@ -214,6 +214,11 @@ class AbstractKeyboard:
         return value
 
     def _fire_event(self, event_name: str, pin: str) -> None:
+        # prevent firing events if keyboard is not yet instantiated
+        # some do that on init if not exited in a default state
+        if doorpi.INSTANCE.keyboard is None:
+            return
+
         eh = doorpi.INSTANCE.event_handler
         doorpi.INSTANCE.keyboard.last_key = (
             self.last_key
