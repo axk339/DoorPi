@@ -37,6 +37,7 @@ class DoorPiSD:
         successfully or that the service is done reloading its
         configuration.
         """
+        self.__send("WATCHDOG=1")
         return self.__send("READY=1")
 
     def reloading(self) -> None:

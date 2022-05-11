@@ -255,7 +255,7 @@ class DoorPi:
 
         # setup watchdog ping and signal startup success
         self.event_handler.register_action(
-            "OnTimeSecondUnevenNumber",
+            "OnTimeSecondOdd",
             doorpi.actions.CallbackAction(self.dpsd.watchdog),
         )
 
