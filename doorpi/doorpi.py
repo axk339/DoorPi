@@ -109,6 +109,7 @@ class DoorPi:
             self._base_path = None
         self.dpsd = None  # type: ignore
         self.event_handler = None  # type: ignore
+        self.startup_events_fired = False  # type: ignore
         self.keyboard = None  # type: ignore
         self.sipphone = None  # type: ignore
         self.webserver = None
@@ -248,7 +249,6 @@ class DoorPi:
 
         self.event_handler.fire_event_sync("BeforeStartup", __name__)
         self.event_handler.fire_event_sync("OnStartup", __name__)
-        self.event_handler.fire_event_sync("AfterStartup", __name__)
 
         LOGGER.info("DoorPi started successfully")
         LOGGER.info("BasePath is %s", self.base_path)
@@ -258,7 +258,6 @@ class DoorPi:
             "OnTimeSecondUnevenNumber",
             doorpi.actions.CallbackAction(self.dpsd.watchdog),
         )
-        self.dpsd.ready()
 
         tickrate = 0.05  # seconds between OnTimeRapidTick events
         tickrate_slow = 10  # rapid ticks between OnTimeTick events
@@ -298,6 +297,12 @@ class DoorPi:
 
             last += tickrate
             time.sleep(last - now)
+
+            if not self.startup_events_fired:
+                # those are sent asynch
+                self.event_handler.fire_event("AfterStartup", __name__)
+                self.startup_events_fired = True
+                self.dpsd.ready()
 
     def parse_string(self, input_string: str) -> str:
         parsed_string = datetime.datetime.now().strftime(str(input_string))
