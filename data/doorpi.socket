@@ -5,4 +5,4 @@ PartOf=doorpi.service
 
 [Socket]
 BindIPv6Only=both
-ListenStream=[::1]:50371
+ListenStream=[::]:50317
