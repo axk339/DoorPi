@@ -6,8 +6,11 @@
         <div class="desc-body">
 
             <p class="desc-heading">Konfigurationsbeispiele</p>
-            <p><span class="bold">OnCallTimeout = "mail:me@home.com,The door bell rang, The door bell rang! But nobody answered, True"</span><span class="hv">  # Definition eines Keyboards namens "onboardpins"</span></p>
+            <p><span class="bold">OnKeyDown = [ "snap_stream:rtsp://192.168.188.1:7447/unicast", ]</span> Dump 1 frame from a (rtsp) stream server</p>
+            <p><span class="bold">OnKeyDown = [ "snap_picam:", ]</span> Takes a snapshot from a picam</p>
+            <p><span class="bold">OnKeyDown = [ "snap_url:http://192.168.188.1:9000/?action=stream", ]</span> Fetches a URL and saves it as snapshot.</p>
             <br>
+            <p><span class="bold">OnCallUnanswered = "mailto:bob,The door bell rang,The door bell rang! But nobody answered, True"</span> More to mail definitions -> mail section</p>
         </div>
     </body>
 </html>

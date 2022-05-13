@@ -5,9 +5,32 @@
     <body>
         <div class="desc-body">
 
-            <p class="desc-heading">Konfigurationsbeispiele</p>
-            <p><span class="bold"></span><span class="hv"></span></p>
+            <p class="desc-heading">Defines a mail server usable to doorpi. (ex. send email if no one answers the doorbell)   </p>
             <br>
+            <p>For starters, get your <span class="command bold">mail outgoing server</span> (SMTP) credentials</p>
+            <p>To define new account values use the "New Config Key" button. If you want to change already entered keys use "Edit Config Key".  </p>
+            <br>
+            <p>Example Configuration for <span class="command bold">T-online</span> mail service with the identifier <span class="command bold">bob</span></p>
+            <p>Edit New Config Key >>> Mail identifier <span class="command bold">bob [ENTER]</span> >>> Keyname (as described below) </p>
+            <dl>
+                <dt class="dl-mirrored dl-400"><span class="command">username</span></dt> <dd class="dl-400 hv">bob_wentnuts@t-online.de</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">password</span></dt> <dd class="dl-400 hv">password</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">email</span></dt> <dd class="dl-400 hv">bob_wentnuts@t-online.de</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">server</span></dt> <dd class="dl-400 hv">securesmtp.t-online.de</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">port</span></dt> <dd class="dl-400 hv">465</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">ssl</span></dt> <dd class="dl-400 hv">true</dd>
+                <dt class="dl-mirrored dl-400"><span class="command">receiver</span></dt> <dd class="dl-400 hv">If this is left empty (default) your email is considered the receiver. If you want to send to a range of ppl, enter a mail address and hit "+" to enter another one.</dd>
+            </dl>
+            <br>
+            <p>The action is then defined with</p>
+            <p>Edit New Config Key >>> [Section Name] events >>> [Eventname] OnCallUnanswered (as an example) >>> [Action] mailto >>> [command] <span class="command bold">bob</span>,door,missed a visitor,true</p>
+            <br>
+            <p>the command structure: mail_identifier, subject, text, send_snapshot</p>
+            <p>it is possible to send the content of a file. For that define <span class="command">text</span> as /path/to/file.txt</p>
+            <br>
+            <div class="panel-red">
+                <a><pre>Be aware that you need to take a snapshot (OnKeyDown,...) beforehand to send a timely picture</pre></a>
+            </div>
         </div>
     </body>
 </html>

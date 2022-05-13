@@ -25,7 +25,6 @@ class MailAction(Action):
         attach_snapshot: str = "false",
     ) -> None:
         super().__init__()
-        self.__to = to
         self.__subject = subject
         self.__snap = attach_snapshot.lower().strip() in {
             "true",
@@ -34,9 +33,11 @@ class MailAction(Action):
             "1",
         }
 
-        cfg = doorpi.INSTANCE.config.view("mail")
+        cfg = doorpi.INSTANCE.config.view(("mail", to))
+
         self.__host = cfg["server"]
         self.__port = cfg["port"]
+        __email = cfg["email"]
 
         need_login = cfg["need_login"]
         if need_login:
@@ -45,10 +46,10 @@ class MailAction(Action):
         else:
             self.__user = self.__pass = None
 
-        try:
-            self.__from = cfg["sender"]
-        except KeyError:
-            self.__from = None
+        self.__to = cfg["receiver"]
+        self.__from = __email
+        if not self.__to[0]:
+            self.__to = (self.__from,)
         self.__ssl = cfg["ssl"]
         self.__starttls = cfg["tls"]
         self.__signature = cfg["signature"]
@@ -62,6 +63,8 @@ class MailAction(Action):
             self.__textfile = None
             self.__text = text
 
+        if not __email:
+            raise ValueError("Email has to be defined")
         if not self.__host:
             raise ValueError("No SMTP host set")
         if self.__port < 0 or self.__port > 65535:
@@ -79,10 +82,10 @@ class MailAction(Action):
 
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         msg = email.message.EmailMessage()
+        msg["To"] = ", ".join(self.__to)
         msg["From"] = self.__from or '"{}" <{}@{}>'.format(
             metadata.distribution.metadata["Name"], self.__user, self.__host
         )
-        msg["To"] = self.__to
         msg["Subject"] = doorpi.INSTANCE.parse_string(self.__subject)
 
         text = self.__text
@@ -118,6 +121,7 @@ class MailAction(Action):
             with session as smtp:
                 self._start_session(smtp)
                 smtp.send_message(msg)
+
         except smtplib.SMTPException as err:
             LOGGER.error(
                 "[%s] Failed sending email to %s: %s: %s",
@@ -127,7 +131,7 @@ class MailAction(Action):
                 err,
             )
         else:
-            LOGGER.info("[%s] Sent email to %s", event_id, self.__to)
+            LOGGER.info("[%s] Sent email to %s", event_id, ', '.join(self.__to))
 
     def _start_session(self, smtp: smtplib.SMTP) -> None:
         if self.__starttls:
@@ -136,7 +140,7 @@ class MailAction(Action):
             smtp.login(self.__user, self.__pass)
 
     def __str__(self) -> str:
-        return f"Send a mail to {self.__to}"
+        return f"Send a mail to {', '.join(self.__to)}"
 
     def __repr__(self) -> str:
         return (

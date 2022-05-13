@@ -193,9 +193,9 @@
 												<label>Section Name (new)</label>
 												<input class="form-control" placeholder="Enter name of new section" id="idNewConfigSectionInputVal">
 											</div>
-											<div class="form-group" id="idNewConfigKeyboardInput">
-												<label id="idNewConfigKeyboardLabel">Keyboard Name </label>
-												<input class="form-control" placeholder="Which Keyboard?" id="idNewConfigKeyboardInputVal">
+											<div class="form-group" id="idNewConfigIdentifierInput">
+												<label id="idNewConfigIdentifierLabel">Name </label>
+												<input class="form-control" placeholder="Which name?" id="idNewConfigIdentifierInputVal">
 											</div>
 											<div class="form-group" id="idNewConfigKeyInput">
 												<label id="NewConfigKeyLabel">Keyname</label>
@@ -247,15 +247,15 @@
 													$("#idNewConfigKeySelectVal").val('');
 													$('#removeNewConfigRow').css('visibility', 'hidden');
 													$('#addNewConfigRow').css('visibility', 'hidden');
-													$('#idNewConfigKeyboardInput').css('display', 'none');
-													$("#idNewConfigKeyboardInputVal").val('');
-													ResetNewConfigKeyboard();
+													$('#idNewConfigIdentifierInput').css('display', 'none');
+													$("#idNewConfigIdentifierInputVal").val('');
+													ResetNewConfigIdentifier();
 												}
 
-												function ResetNewConfigKeyboard () {
+												function ResetNewConfigIdentifier () {
 													$("#idNewConfigValueInputVal").val('');
 													$("#idNewConfigValueInputVal").val('');
-													$('#idNewConfigKeyboardLabel').text('Keyboard Name ');
+													$('#idNewConfigIdentifierLabel').text('Name ');
 													$("#idAdditionalNewConfigInputRows").empty();
 													$('#idNewConfigPinInput').css('display', 'none');
 													$("#idNewConfigPinInputVal").val('');
@@ -288,19 +288,19 @@
 																	}
 																}
 															})
-														} else if ($("#idNewConfigSectionSelectVal").val() == "keyboard") {
-															let keyboards = []
+														} else if (["keyboard", "mail"].includes($("#idNewConfigSectionSelectVal").val())) {
+															let values = []
 															$.each(Object.keys(oConfigObject[$("#idNewConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
-																kb = key_name.split(".")[1]
-																if (kb !== "*" && !keyboards.includes(kb)) {
-																	keyboards.push(kb)
+																value = key_name.split(".")[1]
+																if (value !== "*" && !values.includes(value)) {
+																	values.push(value)
 																}
 															});
-															$("#idNewConfigKeyboardInput").css('display', 'block')
-															if (keyboards.length !== 0) {
-																$("#idNewConfigKeyboardLabel").append("(existing: "+keyboards+")")
+															$("#idNewConfigIdentifierLabel").text($("#idNewConfigSectionSelectVal").val().concat(" identifier "));
+															$("#idNewConfigIdentifierInput").css('display', 'block');
+															if (values.length !== 0) {
+																$("#idNewConfigIdentifierLabel").append("(existing: "+values+")")
 															}
-
 														} else {
 															$.each(Object.keys(oConfigObject[$("#idNewConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
 																if (key_name.includes("*")) {
@@ -316,7 +316,7 @@
 													});
 
 													$("#idNewConfigKeySelectVal").change( function() {
-														ResetNewConfigKeyboard();
+														ResetNewConfigIdentifier();
 														$('#addNewConfigRow').css('visibility', 'visible');
 														if ($("#idNewConfigSectionSelectVal").val() == "events" || $('#idNewConfigKeySelectVal option:selected').text() == 'input') {
 															if ($('#idNewConfigKeySelectVal option:selected').text() == 'input') {
@@ -333,11 +333,15 @@
 														}
 													});
 
-													$("#idNewConfigKeyboardInputVal").change( function() {
+													$("#idNewConfigIdentifierInputVal").change( function() {
+														let keys = []
 														$.each(Object.keys(oConfigObject[$("#idNewConfigSectionSelectVal").val()]).sort(SortByName), function(single_key_object, key_name) {
 															key = key_name.split(".")[2]
-															key_name = key_name.replace("*", $("#idNewConfigKeyboardInputVal").val())
-															$('#idNewConfigKeySelectVal').append('<option value="'+key_name+'">'+key+'</option>');
+															key_name = key_name.replace("*", $("#idNewConfigIdentifierInputVal").val())
+															if (!keys.includes(key)) {
+																$('#idNewConfigKeySelectVal').append('<option value="'+key_name+'">'+key+'</option>');
+																keys.push(key)
+															}
 														});
 													});
 

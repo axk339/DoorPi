@@ -1,46 +1,52 @@
-[config.mail.server]
+[config.mail."*".server]
 _description = "The SMTP server to use for sending e-mails"
 _type = "string"
 _default = ""
 
-[config.mail.port]
+[config.mail."*".port]
 _description = "The SMTP server port"
 _type = "int"
 _default = 587
 _min = 1
 _max = 65535
 
-[config.mail.need_login]
+[config.mail."*".need_login]
 _description = "Whether the server requires authentication"
 _type = "bool"
-_default = false
+_default = true
 
-[config.mail.username]
+[config.mail."*".username]
 _description = "Login user name"
 _type = "string"
 _default = ""
 
-[config.mail.password]
+[config.mail."*".password]
 _description = "Login password"
 _type = "password"
 _default = ""
 
-[config.mail.ssl]
-_description = "Use SSL transport encryption"
-_type = "bool"
-_default = false
-
-[config.mail.tls]
-_description = "Use STARTTLS transport encryption"
-_type = "bool"
-_default = false
-
-[config.mail.sender]
+[config.mail."*".email]
 _description = "The sender e-mail identity"
 _type = "string"
 _default = ""
 
-[config.mail.signature]
+[config.mail."*".ssl]
+_description = "Use SSL transport encryption"
+_type = "bool"
+_default = false
+
+[config.mail."*".tls]
+_description = "Use STARTTLS transport encryption"
+_type = "bool"
+_default = false
+
+[config.mail."*".receiver]
+_description = "The receiver e-mail identity"
+_type = "list"
+_membertype = "string"
+_default = []
+
+[config.mail."*".signature]
 _description = "Signature to put at the end of every e-mail"
 _type = "string"
 _default = "!EPILOG!"
