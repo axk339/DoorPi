@@ -91,8 +91,6 @@ def parse_arguments() -> argparse.Namespace:
     )
     arg_parser.add_argument(
         "--logfile",
-        action="store",
-        nargs=1,
         help="Specify file to log into. If unspecified, log to stderr.",
     )
 
