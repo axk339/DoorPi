@@ -7,9 +7,9 @@ After=doorpi.socket
 [Service]
 Type=notify
 ExecStart=!!prefix!!/bin/doorpi --configfile !!cfgfile!!
-Restart=always
-NotifyAccess=main
-WatchdogSec=4s
+Restart=on-failure
+NotifyAccess=all
+WatchdogSec=15s
 
 User=!!user!!
 Group=!!group!!
@@ -17,29 +17,6 @@ SupplementaryGroups=audio
 SupplementaryGroups=gpio
 SupplementaryGroups=spi
 SupplementaryGroups=video
-DynamicUser=true
-
-CapabilityBoundingSet=
-AmbientCapabilities=
-NoNewPrivileges=true
-
-ProtectSystem=strict
-ProtectHome=true
-RuntimeDirectory=!!project!!
-StateDirectory=!!project!!
-LogsDirectory=!!project!!
-ConfigurationDirectory=!!cfgdir!!
-
-PrivateTmp=true
-PrivateDevices=false
-ProtectKernelTunables=false
-ProtectKernelModules=true
-ProtectControlGroups=true
-
-LockPersonality=true
-MemoryDenyWriteExecute=false
-RestrictRealtime=true
-RemoveIPC=true
 
 [Install]
 WantedBy=multi-user.target
