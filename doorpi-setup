@@ -187,15 +187,15 @@ choose () { echo ${1:RANDOM%${#1}:1} $RANDOM; }
 
 SwapCheck (){
     if [ $TOTALMEM -lt $MINMEM ] ; then
-        sudo dphys-swapfile swapoff > "$out" 2>&1
+        sudo dphys-swapfile swapoff >> "$out" 2>&1
         SWAPNEEDED=$(expr $(expr $MINMEM - $MEM) / 1024)
-        echo "Swap needed $SWAPNEEDED Mb" > "$out" 2>&1
+        echo "Swap needed $SWAPNEEDED Mb" >> "$out" 2>&1
         sudo sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${SWAPNEEDED}/g" /etc/dphys-swapfile
-        sudo dphys-swapfile setup > "$out" 2>&1
-        sudo dphys-swapfile swapon > "$out" 2>&1
+        sudo dphys-swapfile setup >> "$out" 2>&1
+        sudo dphys-swapfile swapon >> "$out" 2>&1
         echo "Swap size had to be raised - reboot in 10s"
         sleep 10
-        sudo systemctl --message="Swap size had to be raised" reboot > "$out" 2>&1
+        sudo systemctl --message="Swap size had to be raised" reboot >> "$out" 2>&1
         exit
     fi
 }
@@ -203,7 +203,7 @@ SwapCheck (){
 StartDaemon (){
     bckgrnd=$1
     set -e
-    sudo systemctl is-enabled --quiet smbd 2>/dev/null || sudo systemctl enable doorpi > "$out" 2>&1
+    sudo systemctl is-enabled --quiet smbd 2>/dev/null || sudo systemctl enable doorpi >> "$out" 2>&1
     [[ -z $bckgrnd ]] && sudo systemctl start doorpi.service || sudo systemctl start doorpi.service &
     set +e
     touch ${TEMPDIR}/result && echo "\n Doorpi service enabled and started" > ${TEMPDIR}/result
@@ -212,7 +212,7 @@ StartDaemon (){
 
 StopDaemon (){
     [[ ! -d $BASE_PATH ]] && touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result && return
-    systemctl stop doorpi > "$out" 2>&1
+    systemctl stop doorpi >> "$out" 2>&1
     touch ${TEMPDIR}/result && echo "\n Doorpi service stopped" > ${TEMPDIR}/result
 }
 
@@ -237,34 +237,34 @@ EOF
 
     if found_exe zypper ; then
         # OpenSUSE
-        sudo zypper install -y git python3 python3-devel dialog v4l2loopback-autoload v4l2loopback-kmp-default v4l2loopback-utils > "$out" 2>&1
+        sudo zypper install -y git python3 python3-devel dialog v4l2loopback-autoload v4l2loopback-kmp-default v4l2loopback-utils >> "$out" 2>&1
     elif found_exe yum && os_is centos ; then
         # CentOS
         sudo yum update 1>/dev/null
         sudo yum install epel-release
-        sudo yum install -y cmake git python3-devel python3-pip dialog curl > "$out" 2>&1
+        sudo yum install -y cmake git python3-devel python3-pip dialog curl >> "$out" 2>&1
     elif found_exe yum && os_is rhel ; then
         # Redhat Enterprise Linux
         sudo yum update 1>/dev/null
-        sudo yum install -y cmake git python3-devel dialog curl > "$out" 2>&1
+        sudo yum install -y cmake git python3-devel dialog curl >> "$out" 2>&1
     elif os_is_like debian || os_is debian || os_is_like ubuntu || os_is ubuntu || os_is linuxmint; then
         # Debian / Ubuntu / Mint
         sudo apt-get update 1>/dev/null
-        sudo apt-get install -y git python3 python3-pip python3-dev python3-setuptools dialog curl v4l2loopback-dkms v4l2loopback-utils > "$out" 2>&1
+        sudo apt-get install -y git python3 python3-pip python3-dev python3-setuptools dialog curl v4l2loopback-dkms v4l2loopback-utils >> "$out" 2>&1
     elif os_is_like fedora || os_is fedora; then
         # Fedora
         sudo dnf update 1>/dev/null
-        sudo dnf install -y git python3 python3-devel python3-pip python3-setuptools python3-virtualenv dialog curl v4l2loopback kmod-v4l2loopback > "$out" 2>&1
+        sudo dnf install -y git python3 python3-devel python3-pip python3-setuptools python3-virtualenv dialog curl v4l2loopback kmod-v4l2loopback >> "$out" 2>&1
     elif found_exe pacman && (os_is arch || os_is_like arch); then
         # Arch Linux
-        sudo pacman -S --needed --noconfirm git python python-pip python-setuptools python-virtualenv dialog curl v4l2loopback-dkms v4l2loopback-utils > "$out" 2>&1
+        sudo pacman -S --needed --noconfirm git python python-pip python-setuptools python-virtualenv dialog curl v4l2loopback-dkms v4l2loopback-utils >> "$out" 2>&1
     elif found_exe emerge && os_is gentoo; then
         # Gentoo Linux
-        sudo emerge --noreplace dev-vcs/git dev-lang/python dev-python/setuptools dev-python/requests dev-util/dialog > "$out" 2>&1
+        sudo emerge --noreplace dev-vcs/git dev-lang/python dev-python/setuptools dev-python/requests dev-util/dialog >> "$out" 2>&1
     elif found_exe apk && os_is alpine; then
         # Alpine Linux
         sudo apk update 1>/dev/null
-        sudo apk add --virtual git python3 py3-pip py3-setuptools py3-virtualenv dialog curl > "$out" 2>&1
+        sudo apk add --virtual git python3 py3-pip py3-setuptools py3-virtualenv dialog curl >> "$out" 2>&1
     else
     	echo
         echo "Could not find package manager. Make sure to manually install: git python3 python-setuptools python-venv \n"
@@ -272,7 +272,7 @@ EOF
     fi
 
     #TODO user install -> add PATH
-    curl -s "${GET_PIP_URL}" | "/bin/python3" - > "$out" 2>&1
+    curl -s "${GET_PIP_URL}" | "/bin/python3" - >> "$out" 2>&1
 
     if [[ $DOORPI_BRANCH != "master" ]] ; then
         git checkout "$DOORPI_BRANCH" > /dev/null 2>&1
@@ -390,7 +390,7 @@ AsteriskDeps () {
             fi
         done
     else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" > "$out" 2>&1
+        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
     fi
     set +e
     echo "
@@ -452,9 +452,9 @@ VideoDeps () {
             fi
         done
     else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" > "$out" 2>&1
+        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
     fi
-    pip install alembic > "$out" 2>&1
+    pip install alembic >> "$out" 2>&1
     set +e
     echo "
 Done ckecking dependencies
@@ -490,7 +490,7 @@ VideoserverDeps () {
             fi
         done
     else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" > "$out" 2>&1
+        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
     fi
     set +e
     echo "
@@ -527,10 +527,10 @@ SambaDeps (){
             fi
         done
     else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" > "$out" 2>&1
+        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
     fi
-    sudo systemctl is-enabled --quiet smbd 2>/dev/null || sudo systemctl enable smbd > "$out" 2>&1
-    sudo systemctl is-enabled --quiet nsmbd 2>/dev/null || sudo systemctl enable nmbd > "$out" 2>&1
+    sudo systemctl is-enabled --quiet smbd 2>/dev/null || sudo systemctl enable smbd >> "$out" 2>&1
+    sudo systemctl is-enabled --quiet nsmbd 2>/dev/null || sudo systemctl enable nmbd >> "$out" 2>&1
     set +e
     echo "
 Done ckecking dependencies
@@ -544,9 +544,9 @@ BuildH264 () {
 "
     if [[ ! -d openh264 ]]; then
         echo "... Downloading OpenH264 package"
-        git clone https://github.com/cisco/openh264 > "$out" 2>&1
+        git clone https://github.com/cisco/openh264 >> "$out" 2>&1
         cd openh264
-        git checkout openh264${O264_VER} > "$out" 2>&1
+        git checkout openh264${O264_VER} >> "$out" 2>&1
     fi
     cd openh264
     # in case of not debugging inhibit warnings
@@ -554,13 +554,13 @@ BuildH264 () {
        sed -i "s/^CFLAGS_OPT=-O3$/CFLAGS_OPT=-O3 -w/" Makefile
     fi
     if [[ -f "libopenh264.so" ]]; then
-        make clean > "$out" 2>&1
+        make clean >> "$out" 2>&1
         echo "cleaned old build"
     fi
     echo "... Building package"
-    make -j`nproc` > "$out" 2>&1
+    make -j`nproc` >> "$out" 2>&1
     echo "... Installing package"
-    sudo make install > "$out" 2>&1
+    sudo make install >> "$out" 2>&1
     cd ${TEMPDIR} && rm -rf openh264
     sudo ldconfig
     echo "
@@ -575,10 +575,10 @@ BuildPJSIP () {
 "
     if [[ ! -f $PJSIP_PACKAGE ]]; then
         echo "... Downloading OpenH264 package"
-        wget https://github.com/pjsip/pjproject/archive/refs/tags/${PJSIP_PACKAGE} > "$out" 2>&1
+        wget https://github.com/pjsip/pjproject/archive/refs/tags/${PJSIP_PACKAGE} >> "$out" 2>&1
     fi
     if [[ ! -d pjproject-${PJSIP_VER} ]]; then
-        tar xvfz ${PJSIP_PACKAGE} > "$out" 2>&1
+        tar xvfz ${PJSIP_PACKAGE} >> "$out" 2>&1
     fi
     cd pjproject-${PJSIP_VER}
     if [[ ! -f ${TEMPDIR}/pjproject-${PJSIP_VER}/pjlib/include/pj/config_site.h ]]; then
@@ -619,18 +619,18 @@ export LDFLGS +=" > user.mak
     fi
     #patching pjsip
     if [[ ! -f .patched ]]; then
-        patch -u third_party/build/os-auto.mak.in -i "$DATADIR"/pjsip_2.12.patch > "$out" 2>&1
+        patch -u third_party/build/os-auto.mak.in -i "$DATADIR"/pjsip_2.12.patch >> "$out" 2>&1
         touch .patched
     fi
     echo "... Configuring build"
-    ./configure --enable-shared > "$out" 2>&1
-    make dep > "$out" 2>&1
+    ./configure --enable-shared >> "$out" 2>&1
+    make dep >> "$out" 2>&1
     echo "done"
     echo "... Building package"
-    make -j`nproc` > "$out" 2>&1
+    make -j`nproc` >> "$out" 2>&1
     echo "done"
     echo "... Installing package"
-    sudo make install > "$out" 2>&1
+    sudo make install >> "$out" 2>&1
     echo "done"
     cd pjsip-apps/src/swig/python
     echo "... Building python package"
@@ -639,10 +639,10 @@ export LDFLGS +=" > user.mak
     else
         sed -i "s|\$(PYTHON_EXE) setup.py -q build \$(PYTHON_SETUP_FLAGS)|\$(PYTHON_EXE) setup.py build \$(PYTHON_SETUP_FLAGS)|" Makefile
     fi
-    make > "$out" 2>&1
+    make >> "$out" 2>&1
     echo "done"
     echo "... Installing python package"
-    pip install . > "$out" 2>&1
+    pip install . >> "$out" 2>&1
     echo "done"
     cd ${TEMPDIR}
     sudo rm -rf pjproject-${PJSIP_VER}
@@ -662,10 +662,10 @@ ConfigAsterisk () {
     echo "[Asterisk] (Realtime configuration)
 "
     echo "... building ODBC"
-    git clone ${ASTERISK_PACKAGE} > "$out" 2>&1
-    git clone ${ODBC_PACKAGE} > "$out" 2>&1
+    git clone ${ASTERISK_PACKAGE} >> "$out" 2>&1
+    git clone ${ODBC_PACKAGE} >> "$out" 2>&1
     cd mariadb-connector-odbc
-    git checkout tags/3.1.15 > "$out" 2>&1
+    git checkout tags/3.1.15 >> "$out" 2>&1
     mkdir build
     cd build
     if [ "$(uname -m)" = "aarch64" ]; then
@@ -674,9 +674,9 @@ ConfigAsterisk () {
         DDM_DIR=/usr/lib/arm-linux-gnueabihf
     fi
     cmake ../ -Wno-dev -LH -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_SSL=OPENSSL\
-     -DDM_DIR="${DDM_DIR}" -DCMAKE_C_FLAGS_RELEASE:STRING="-w" > "$out" 2>&1
-    cmake --build . --config Release > "$out" 2>&1
-    sudo make install > "$out" 2>&1
+     -DDM_DIR="${DDM_DIR}" -DCMAKE_C_FLAGS_RELEASE:STRING="-w" >> "$out" 2>&1
+    cmake --build . --config Release >> "$out" 2>&1
+    sudo make install >> "$out" 2>&1
     cd ${TEMPDIR}
     rm -rf mariadb-connector-odbc
     sudo ldconfig
@@ -685,10 +685,10 @@ ConfigAsterisk () {
     DB_EXIST=$( sudo mysqlshow | grep "$DBNAME" )
     if [[ -z $DB_EXIST ]]; then
         echo "... setting up database"
-        sudo mysql -uroot -p${ROOTPW} -e "CREATE DATABASE ${DBNAME} /*\!40100 DEFAULT CHARACTER SET utf8 */;" > "$out" 2>&1
-        sudo mysql -uroot -p${ROOTPW} -e "CREATE USER ${DBUSER}@localhost IDENTIFIED BY '${DBPW}';" > "$out" 2>&1
-        sudo mysql -uroot -p${ROOTPW} -e "GRANT ALL PRIVILEGES ON $DBNAME.* TO '$DBUSER'@'localhost';" > "$out" 2>&1
-        sudo mysql -uroot -p${ROOTPW} -e "FLUSH PRIVILEGES;" > "$out" 2>&1
+        sudo mysql -uroot -p${ROOTPW} -e "CREATE DATABASE ${DBNAME} /*\!40100 DEFAULT CHARACTER SET utf8 */;" >> "$out" 2>&1
+        sudo mysql -uroot -p${ROOTPW} -e "CREATE USER ${DBUSER}@localhost IDENTIFIED BY '${DBPW}';" >> "$out" 2>&1
+        sudo mysql -uroot -p${ROOTPW} -e "GRANT ALL PRIVILEGES ON $DBNAME.* TO '$DBUSER'@'localhost';" >> "$out" 2>&1
+        sudo mysql -uroot -p${ROOTPW} -e "FLUSH PRIVILEGES;" >> "$out" 2>&1
         echo "done"
     fi
 
@@ -700,7 +700,7 @@ ConfigAsterisk () {
 Description=ODBC for MariaDB
 Driver=$LIBPATH1
 Setup=$LIBPATH2
-UsageCount=1" | sudo tee /etc/odbcinst.ini > "$out" 2>&1
+UsageCount=1" | sudo tee /etc/odbcinst.ini >> "$out" 2>&1
 
     [[ -f /etc/odbc.ini ]] && [[ ! -f /etc/odbc.ini.old ]] && sudo cp /etc/odbc.ini /etc/odbc.ini.old
     SOCKPATH=$(sudo find / -name mysqld.sock | awk '{print $1}')
@@ -710,7 +710,7 @@ Driver = MariaDB
 Database = ${DBNAME}
 Server = localhost
 Port = 3306
-Socket = $SOCKPATH" | sudo tee -a /etc/odbc.ini > "$out" 2>&1
+Socket = $SOCKPATH" | sudo tee -a /etc/odbc.ini >> "$out" 2>&1
 
     [[ ! -f /etc/asterisk/res_odbc.conf.old ]] && sudo cp /etc/asterisk/res_odbc.conf /etc/asterisk/res_odbc.conf.old
     #always start fresh
@@ -725,7 +725,7 @@ Socket = $SOCKPATH" | sudo tee -a /etc/odbc.ini > "$out" 2>&1
         cd ${TEMPDIR}/asterisk/contrib/ast-db-manage/
         mv config.ini.sample config.ini
         sed -i "s/^sqlalchemy.url.*/sqlalchemy.url = mysql:\/\/$DBUSER:$DBPW@localhost\/$DBNAME/g" config.ini
-        alembic -c config.ini upgrade head > "$out" 2>&1
+        alembic -c config.ini upgrade head >> "$out" 2>&1
         echo "done"
     fi
 
@@ -739,7 +739,7 @@ domain_alias=realtime,ps_domain_aliases
 contact=realtime,ps_contacts
 
 [res_pjsip_endpoint_identifier_ip]
-identify=realtime,ps_endpoint_id_ips" | sudo tee -a /etc/asterisk/sorcery.conf > "$out" 2>&1
+identify=realtime,ps_endpoint_id_ips" | sudo tee -a /etc/asterisk/sorcery.conf >> "$out" 2>&1
 
     [[ ! -f /etc/asterisk/extconfig.conf.old ]] && sudo cp /etc/asterisk/extconfig.conf /etc/asterisk/extconfig.conf.old
     #always start fresh
@@ -749,7 +749,7 @@ identify=realtime,ps_endpoint_id_ips" | sudo tee -a /etc/asterisk/sorcery.conf >
     sudo sed -i "s/^;ps_aors.*/ps_aors => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
     sudo sed -i "s/^;ps_domain_aliases.*/ps_domain_aliases => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
     sudo sed -i "s/^;ps_endpoint_id_ips.*/ps_endpoint_id_ips => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
-    echo "ps_contacts => odbc,$DBUSER" | sudo tee -a /etc/asterisk/extconfig.conf > "$out" 2>&1
+    echo "ps_contacts => odbc,$DBUSER" | sudo tee -a /etc/asterisk/extconfig.conf >> "$out" 2>&1
 
     [[ ! -f /etc/asterisk/modules.conf.old ]] && sudo cp /etc/asterisk/modules.conf /etc/asterisk/modules.conf.old
     #always start fresh
@@ -774,7 +774,7 @@ identify=realtime,ps_endpoint_id_ips" | sudo tee -a /etc/asterisk/sorcery.conf >
     [[ -z $( sudo cat /etc/asterisk/extensions.conf | grep '\[sipgate\]' ) ]] && echo '
 [sipgate]
 exten => _XXX,1,NoOp()
-same => n,Dial(PJSIP/${EXTEN})' | sudo tee -a /etc/asterisk/extensions.conf > "$out" 2>&1
+same => n,Dial(PJSIP/${EXTEN})' | sudo tee -a /etc/asterisk/extensions.conf >> "$out" 2>&1
 }
 
 ConfigPhone () {
@@ -786,9 +786,9 @@ ConfigPhone () {
     read DBNAME DBPW DBUSER <<< "${astvars[*]}"
 
     set +e
-    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_aors (id, max_contacts) VALUES (${PHONENUM}, 10);" > "$out" 2>&1
-    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_auths (id, auth_type, password, username) VALUES (${PHONENUM}, 'userpass', ${PHONEPW}, ${PHONENUM});" > "$out" 2>&1
-    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_endpoints (id, transport, aors, auth, context, disallow, allow, direct_media) values (${PHONENUM}, 'transport-udp', '${PHONENUM}', '${PHONENUM}', '${DIALPLAN}', 'all', 'ulaw;alaw;gsm;g726;g722;h264;h263;vp8;vp9', 'no');" > "$out" 2>&1
+    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_aors (id, max_contacts) VALUES (${PHONENUM}, 10);" >> "$out" 2>&1
+    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_auths (id, auth_type, password, username) VALUES (${PHONENUM}, 'userpass', ${PHONEPW}, ${PHONENUM});" >> "$out" 2>&1
+    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_endpoints (id, transport, aors, auth, context, disallow, allow, direct_media) values (${PHONENUM}, 'transport-udp', '${PHONENUM}', '${PHONENUM}', '${DIALPLAN}', 'all', 'ulaw;alaw;gsm;g726;g722;h264;h263;vp8;vp9', 'no');" >> "$out" 2>&1
     set -e
     touch ${TEMPDIR}/result
     echo "
@@ -823,11 +823,11 @@ BuildVideoserver () {
         VideoserverDeps
         echo "... building Videoserver"
         cd ${TEMPDIR}
-        git clone ${RTSP_PACKAGE} > "$out" 2>&1
+        git clone ${RTSP_PACKAGE} >> "$out" 2>&1
         cd v4l2rtspserver/
-        cmake . > "$out" 2>&1
-        make > "$out" 2>&1
-        sudo make install > "$out" 2>&1
+        cmake . >> "$out" 2>&1
+        make >> "$out" 2>&1
+        sudo make install >> "$out" 2>&1
         echo "... done"
 
         #systemd service has to be patched (videoserver has to be run before doorpi)
@@ -840,15 +840,15 @@ BuildVideoserver () {
         cd ${TEMPDIR}
         rm -rf v4l2rtspserver
     else
-        sudo systemctl is-active --quiet v4l2rtspserver && sudo systemctl stop v4l2rtspserver > "$out" 2>&1
+        sudo systemctl is-active --quiet v4l2rtspserver && sudo systemctl stop v4l2rtspserver >> "$out" 2>&1
         sleep 5
         touch ${TEMPDIR}/result
         echo " Configuration changed" > ${TEMPDIR}/result
     fi
 
     sudo sed -i "s#^ExecStart=.*#ExecStart=\/usr\/local\/bin\/v4l2rtspserver -W $VID_WIDTH -H $VID_HEIGHT -F $VID_FRAMES -P $VID_SER_PORT $VID_DEV#g" /lib/systemd/system/v4l2rtspserver.service
-    sudo systemctl is-enabled --quiet v4l2rtspserver 2>/dev/null || sudo systemctl enable v4l2rtspserver > "$out" 2>&1
-    sudo systemctl start v4l2rtspserver > "$out" 2>&1
+    sudo systemctl is-enabled --quiet v4l2rtspserver 2>/dev/null || sudo systemctl enable v4l2rtspserver >> "$out" 2>&1
+    sudo systemctl start v4l2rtspserver >> "$out" 2>&1
 
 }
 
@@ -860,11 +860,11 @@ InstallSamba () {
 
     SambaDeps
     if [[ -n $OVERWRITE ]]; then
-        sudo sed '/###Doorpi.*/,/###Marker/{//!d;s/ ,$//}' /etc/samba/smb.conf > "$out" 2>&1
+        sudo sed '/###Doorpi.*/,/###Marker/{//!d;s/ ,$//}' /etc/samba/smb.conf >> "$out" 2>&1
     fi
 
     # setup for both
-    sudo sed -i "s/^   workgroup =.*/   workgroup = $SMBWG/" /etc/samba/smb.conf > "$out" 2>&1
+    sudo sed -i "s/^   workgroup =.*/   workgroup = $SMBWG/" /etc/samba/smb.conf >> "$out" 2>&1
 
     if [[ $SERVER == "no" ]]; then
         if [[ $SMBUSER != "root" ]]; then
@@ -875,12 +875,12 @@ InstallSamba () {
         touch $CREDFILE
         chmod 0640 $CREDFILE
         echo "username=$SMBUSERNAME
-password=$SMBPW" | tee $CREDFILE > "$out" 2>&1
-        sudo chown -R "$SMBUSER":"$SMBGROUP" "$CREDFILE" > "$out" 2>&1
-        sudo mkdir -p "$SMBPATH" > "$out" 2>&1
-        sudo chown -R "$SMBUSER":"$SMBGROUP" "$SMBPATH" > "$out" 2>&1
+password=$SMBPW" | tee $CREDFILE >> "$out" 2>&1
+        sudo chown -R "$SMBUSER":"$SMBGROUP" "$CREDFILE" >> "$out" 2>&1
+        sudo mkdir -p "$SMBPATH" >> "$out" 2>&1
+        sudo chown -R "$SMBUSER":"$SMBGROUP" "$SMBPATH" >> "$out" 2>&1
         # fstab entry
-        echo "$ACCESSPOINT $SMBPATH cifs credentials=$CREDFILE,vers=3.0,uid=$( id -u $SMBUSER ),gid=$( id -g $SMBGROUP ),noserverino,x-systemd.automount,x-systemd.requires=network-online.target 0 0" | sudo tee -a /etc/fstab > "$out" 2>&1
+        echo "$ACCESSPOINT $SMBPATH cifs credentials=$CREDFILE,vers=3.0,uid=$( id -u $SMBUSER ),gid=$( id -g $SMBGROUP ),noserverino,x-systemd.automount,x-systemd.requires=network-online.target 0 0" | sudo tee -a /etc/fstab >> "$out" 2>&1
         touch ${TEMPDIR}/result
         echo "
  Samba Client configured.
@@ -890,11 +890,11 @@ password=$SMBPW" | tee $CREDFILE > "$out" 2>&1
         # create new user (that can't log in and has no home dir)
         id -u test >/dev/null 2>&1 && SMB_USER_EXIST=1
         if [[ -z $SMB_USER_EXIST ]]; then
-            sudo adduser --no-create-home --disabled-login --gecos "" --shell /bin/false "$SMBUSERNAME" > "$out" 2>&1
+            sudo adduser --no-create-home --disabled-login --gecos "" --shell /bin/false "$SMBUSERNAME" >> "$out" 2>&1
             echo "Samba user '$SMBUSERNAME' added"
-            sudo gpasswd -a "$SMBUSERNAME" sambashare > "$out" 2>&1
+            sudo gpasswd -a "$SMBUSERNAME" sambashare >> "$out" 2>&1
             # also add doorpi user
-            sudo gpasswd -a "$SMBUSER" sambashare > "$out" 2>&1
+            sudo gpasswd -a "$SMBUSER" sambashare >> "$out" 2>&1
             echo "User '$SMBUSERNAME'/'$SMBUSER' added to 'sambashare' group"
             (echo "$SMBPW"; echo "$SMBPW") | smbpasswd -a "$SMBUSERNAME" -s
             echo "Password created for '$SMBUSERNAME'"
@@ -911,11 +911,11 @@ password=$SMBPW" | tee $CREDFILE > "$out" 2>&1
    create mask = 0660\n\
    directory mask = 0770\n\
    guest ok = no\n"
-        sed -i "/^###Doorpi.*/a $ENTRY" /etc/samba/smb.conf > "$out" 2>&1
+        sed -i "/^###Doorpi.*/a $ENTRY" /etc/samba/smb.conf >> "$out" 2>&1
         [[ -n $OVERWRITE ]] && echo "Config overwritten" || echo "Config saved"
-        sudo mkdir -p "$SMBPATH" > "$out" 2>&1
-        sudo chown -R "$SMBUSER":sambashare "$SMBPATH" > "$out" 2>&1
-        sudo chmod -R ug+rwX,o-rwx "$SMBPATH" > "$out" 2>&1
+        sudo mkdir -p "$SMBPATH" >> "$out" 2>&1
+        sudo chown -R "$SMBUSER":sambashare "$SMBPATH" >> "$out" 2>&1
+        sudo chmod -R ug+rwX,o-rwx "$SMBPATH" >> "$out" 2>&1
         touch ${TEMPDIR}/result
         echo "
  Samba Server configured" > ${TEMPDIR}/result
@@ -947,7 +947,7 @@ DoorpiBackup (){
     [[ ! -d $BASE_PATH ]] && touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result && return
 
     cd $BASE_PATH
-    tar -czf "./backup/$BKP_FILE" -v -C "$BASE_PATH" --exclude="./eventlog.db" --exclude="./mnt" --exclude="./backup" --exclude="./src" . > "$out" 2>&1
+    tar -czf "./backup/$BKP_FILE" -v -C "$BASE_PATH" --exclude="./eventlog.db" --exclude="./mnt" --exclude="./backup" --exclude="./src" . >> "$out" 2>&1
 
     if [ $? == 0 ]; then
         touch ${TEMPDIR}/result
@@ -975,7 +975,7 @@ DoorpiRestore (){
 
         BKP_FILE="$BKP_PATH"/"$restoreCHOICE"
         StopDaemon
-        tar -xvf "$BKP_FILE" -C "$BASE_PATH" . > "$out" 2>&1
+        tar -xvf "$BKP_FILE" -C "$BASE_PATH" . >> "$out" 2>&1
         dialog --backtitle "Doorpi Setup" --title "Restore Configuration" --infobox "Wait until service restarts" 5 32
         sleep 10
         StartDaemon
@@ -1062,11 +1062,11 @@ do
                     prepare_install "$PREFIX"
                     INST_MODE="installed"
                 else
-                    sudo systemctl is-active --quiet doorpi && sudo systemctl stop doorpi > "$out" 2>&1
+                    sudo systemctl is-active --quiet doorpi && sudo systemctl stop doorpi >> "$out" 2>&1
                     cd ${BASE_PATH}
-                    git fetch > "$out" 2>&1
-                    git pull > "$out" 2>&1
-                    python3 -m pip uninstall doorpi > "$out" 2>&1
+                    git fetch >> "$out" 2>&1
+                    git pull >> "$out" 2>&1
+                    python3 -m pip uninstall doorpi >> "$out" 2>&1
                     INST_MODE="updated"
                 fi
                 python3 -m pip install . --prefix $PREFIX --ignore-installed PyYAML | dialog --progressbox $(expr $MAXY - 40) $(expr $MAXX - 80)
