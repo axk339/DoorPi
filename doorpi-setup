@@ -48,15 +48,26 @@ PJSIP_VER=${PJSIP_PACKAGE%".tar.gz"}
 
 ADDITIONAL_SYSTEM_REQUIREMENTS=""
 
+print_help () {
+    echo "doorpi-setup help"
+    echo "-----------------"
+    echo ""
+    echo "    -v               prints cmd output to screen during setup"
+    echo "    -l <logfile>     the output gets redirected to the specified file"
+    echo ""
+    echo "    -h               this help"
+}
+
 #The default is sending output to /dev/null, except in case -d or -l logfile
-while getopts 'dl:' FLAG; do
+while getopts 'hvl:' FLAG; do
     case "$FLAG" in
+        h) print_help;;
         l) LOGFILE="$OPTARG";;
-        d) DEBUG=/dev/stdout;;
+        v) VERBOSE=/dev/stdout;;
     esac
 done
-[[ -n $LOGFILE ]] && DEBUG="$LOGFILE"
-out=${DEBUG:-/dev/null}
+[[ -n $LOGFILE ]] && VERBOSE="$LOGFILE"
+out=${VERBOSE:-/dev/null}
 #[ Debug == 1 ] || set -x
 
 # Root Rechte überprüfen
@@ -365,7 +376,7 @@ AsteriskDeps () {
 
     set -e
     echo "... checking dependencies"
-    if [[ -z $DEBUG ]]; then
+    if [[ -z $VERBOSE]]; then
         for pkg in "${PACKAGE_LIST[@]}"
         do
             if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
@@ -425,7 +436,7 @@ VideoDeps () {
     #check if camera module is present in /etc/modules
     [[ -z $( cat /etc/mudules | grep bcm2835-v4l2 ) ]] && echo "bcm2835-v4l2" | sudo tee -a /etc/modules
 
-    if [[ -z $DEBUG ]]; then
+    if [[ -z $VERBOSE ]]; then
         for pkg in "${PACKAGE_LIST[@]}"
         do
             if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
@@ -463,7 +474,7 @@ VideoserverDeps () {
 
     set -e
     echo "... checking dependencies"
-    if [[ -z $DEBUG ]]; then
+    if [[ -z $VERBOSE ]]; then
         for pkg in "${PACKAGE_LIST[@]}"
         do
             if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
@@ -500,7 +511,7 @@ SambaDeps (){
 
     set -e
     echo "... checking dependencies"
-    if [[ -z $DEBUG ]]; then
+    if [[ -z $VERBOSE ]]; then
         for pkg in "${PACKAGE_LIST[@]}"
         do
             if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
@@ -532,7 +543,7 @@ BuildH264 () {
     fi
     cd openh264
     # in case of not debugging inhibit warnings
-    if [[ -z $DEBUG ]]; then
+    if [[ -z $VERBOSE ]]; then
        sed -i "s/^CFLAGS_OPT=-O3$/CFLAGS_OPT=-O3 -w/" Makefile
     fi
     if [[ -f "libopenh264.so" ]]; then
@@ -616,7 +627,7 @@ export LDFLGS +=" > user.mak
     echo "done"
     cd pjsip-apps/src/swig/python
     echo "... Building python package"
-    if [[ -z $DEBUG ]]; then
+    if [[ -z $VERBOSE ]]; then
         sed -i "s|\$(PYTHON_EXE) setup.py build \$(PYTHON_SETUP_FLAGS)|\$(PYTHON_EXE) setup.py -q build \$(PYTHON_SETUP_FLAGS)|" Makefile
     else
         sed -i "s|\$(PYTHON_EXE) setup.py -q build \$(PYTHON_SETUP_FLAGS)|\$(PYTHON_EXE) setup.py build \$(PYTHON_SETUP_FLAGS)|" Makefile
@@ -1013,7 +1024,7 @@ do
         "120" "| Restore Doorpi Config" 3>&2 2>&1 1>&3
     )
 
-    result="Exited with errors. Start setup.sh with --debug to locate the error"
+    result="Exited with errors. Start setup.sh with -v or -l </path/to/file> to locate the error"
     case $CHOICE in
 
             "")
