@@ -230,6 +230,9 @@ EOF
     # enable spi, i2c, audio
     set_pi_config_var dtparam=spi on $CONFIG
     set_pi_config_var dtparam=i2c_arm on $CONFIG
+    if ! grep -q "^i2c[-_]dev" /etc/modules; then
+        printf "i2c-dev\n" >> /etc/modules
+    fi
     set_pi_config_var dtparam=audio on $CONFIG
 
     if found_exe zypper ; then
@@ -343,7 +346,9 @@ prepare_install () {
 
     #setup a virtual loopback device
     echo "#config v4l2loopback module" > "out" 2>&1
-    echo "v4l2loopback" | sudo tee -a /etc/modules > "out" 2>&1
+    if ! grep -q "^v4l2loopback" /etc/modules; then
+        printf "v4l2loopback\n" >> /etc/modules
+    fi
     echo 'options v4l2loopback devices=1
 options v4l2loopback max_buffers=2
 options v4l2loopback exclusive_caps=1
@@ -434,7 +439,9 @@ VideoDeps () {
     echo "gpu_mem=128" | sudo tee -a $CONFIG
 
     #check if camera module is present in /etc/modules
-    [[ -z $( cat /etc/mudules | grep bcm2835-v4l2 ) ]] && echo "bcm2835-v4l2" | sudo tee -a /etc/modules
+    if ! grep -q "^bcm2835-v4l2" /etc/modules; then
+        printf "bcm2835-v4l2\n" >> /etc/modules
+    fi
 
     if [[ -z $VERBOSE ]]; then
         for pkg in "${PACKAGE_LIST[@]}"
