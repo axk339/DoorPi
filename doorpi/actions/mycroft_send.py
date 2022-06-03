@@ -19,8 +19,10 @@ class MycroftSendAction(Action):
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
 
         mycroft = MycroftConnect.instance()
-        sent = mycroft.send_message(self.hivetype, self.msgtype, self.text)
+        if not mycroft.connected:
+            return
 
+        sent = mycroft.send_message(self.hivetype, self.msgtype, self.text)
         if sent:
             LOGGER.info("Message sent to Mycroft")
         else:
