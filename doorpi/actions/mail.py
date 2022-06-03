@@ -48,7 +48,7 @@ class MailAction(Action):
 
         self.__to = cfg["receiver"]
         self.__from = __email
-        if not self.__to[0]:
+        if not self.__to:
             self.__to = (self.__from,)
         self.__ssl = cfg["ssl"]
         self.__starttls = cfg["tls"]
