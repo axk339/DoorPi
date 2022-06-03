@@ -67,6 +67,7 @@ import doorpi
 from doorpi import metadata
 
 from .abc import AbstractSIPPhone
+from .videoserver import Videoserver
 
 __all__ = ["DEFAULT_MEDIA_DIR", "AbstractSIPPhone", "load"]
 
