@@ -4,10 +4,10 @@ _type = "path"
 _default = "snapshots"
 
 [config.snapshots.keep]
-_description = "Maximum number of snapshots to keep"
+_description = "Maximum number of snapshots to keep; 0 = unlimited"
 _type = "int"
-_default = 10
-_min = 1
+_default = 0
+_min = 0
 
 [config.snapshots.width]
 _description = "Desired horizontal snapshot resolution. Height will be scaled to match the format"

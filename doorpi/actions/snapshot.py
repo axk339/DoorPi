@@ -29,7 +29,7 @@ class SnapshotAction(Action):
         """
 
         keep = doorpi.INSTANCE.config["snapshots.keep"]
-        if keep <= 0:
+        if keep == 0:
             return
         files = cls.list_all()
         for fi in files[0:-keep]:
