@@ -123,7 +123,7 @@ class StreamSnapshotAction(SnapshotAction):
                 .filter('scale', self.width or -1, -1)
                 .output(__outfile, vframes=1)
                 .overwrite_output()
-                .async_run(pipe_stdin=subprocess.DEVNULL, pipe_stdout=True, pipe_stderr=True)
+                .run_async(pipe_stdin=subprocess.DEVNULL, pipe_stdout=True, pipe_stderr=True)
             )
         except ffmpeg.Error as e:
             LOGGER.error(f"Can't make a snapshot: {e.stderr.decode()}")
