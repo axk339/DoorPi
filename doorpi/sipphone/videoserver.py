@@ -110,6 +110,7 @@ class Videoserver(object):
         if self.transcoder_running:
             LOGGER.debug("Shutting down process")
             self.transcoder.terminate()
+            self.transcoder.communicate()
             self.transcoder_running = False
         else:
             LOGGER.debug("No FFmpeg transcoder process is running")
