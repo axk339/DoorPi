@@ -7,6 +7,7 @@ import html
 import itertools
 import logging
 import os
+from psutil import pid_exists
 import pathlib
 import signal
 import sys
@@ -98,6 +99,8 @@ class DoorPi:
         if not TYPE_CHECKING and doorpi.INSTANCE is not None:
             raise RuntimeError("Only one DoorPi instance can be created")
         doorpi.INSTANCE = self
+        self.ppid = os.getppid()
+        LOGGER.debug(f"Parent process PID is {self.ppid}")
 
         self.configfile = pathlib.Path(args.configfile)
         self.config = doorpi.config.Configuration()
@@ -120,6 +123,10 @@ class DoorPi:
         self.__shutdown = False
 
         self.__last_tick = time.time()
+
+    def check_parent_process(self):
+        if not pid_exists(self.ppid):
+            self.destroy()
 
     def doorpi_shutdown(self, time_until_shutdown: int = 0) -> None:
         """Tell DoorPi to shut down."""
@@ -169,6 +176,9 @@ class DoorPi:
         # register base actions
         self.event_handler.register_action(
             "OnTimeTick", f"time_tick:{self.__last_tick}"
+        )
+        self.event_handler.register_action(
+            "OnTimeSecondOdd", doorpi.actions.CallbackAction(self.check_parent_process)
         )
 
         # init videoserver (and start transcoding to get registered by sipphone)
