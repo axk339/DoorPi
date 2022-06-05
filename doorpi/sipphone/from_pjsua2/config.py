@@ -56,6 +56,10 @@ def account_config() -> pj.AccountConfig:
         acfg.videoConfig.autoTransmitOutgoing = True
         acfg.mediaConfig.vidPreviewEnableNative = False
 
+    # Software Echo Cancellation
+    if doorpi.INSTANCE.config["sipphone.echo_cancellation.enabled"]:
+        acfg.mediaConfig.ecOptions = pj.PJMEDIA_ECHO_USE_SW_ECHO
+
     authCred = pj.AuthCredInfo()
     authCred.scheme = "digest"
     authCred.realm = sip_realm
@@ -279,10 +283,10 @@ def setup_audio_echo_cancellation(adm: pj.AudDevManager) -> None:
     """Sets up echo cancellation in PJSUA2."""
     if doorpi.INSTANCE.config["sipphone.echo_cancellation.enabled"]:
         tail = doorpi.INSTANCE.config["sipphone.echo_cancellation.tail"]
-        LOGGER.trace("Setting echo cancellation tail length to %dms", tail)
+        LOGGER.trace("Setting software echo cancellation tail length to %dms", tail)
         adm.setEcOptions(tail, 0)
     else:
-        LOGGER.trace("Disabling echo cancellation")
+        LOGGER.trace("Disabling software echo cancellation")
         adm.setEcOptions(0, 0)
 
 
