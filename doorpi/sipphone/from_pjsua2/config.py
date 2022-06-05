@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import alsaaudio
 from typing import TYPE_CHECKING, cast
 
 import pjsua2 as pj
@@ -222,6 +223,11 @@ def setup_audio_volume(adm: pj.AudDevManager) -> None:
     capture_volume = doorpi.INSTANCE.config["sipphone.capture.volume"]
     playback_volume = doorpi.INSTANCE.config["sipphone.playback.volume"]
     if playback_volume >= 0:
+        # also set the Sys Master Volume
+        control = alsaaudio.mixers()[0]
+        mixer = alsaaudio.Mixer(control)
+        mixer.setvolume(playback_volume)
+
         LOGGER.trace("Setting playback volume to %d", playback_volume)
         try:
             adm.setOutputVolume(playback_volume, True)
