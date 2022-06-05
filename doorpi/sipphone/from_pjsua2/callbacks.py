@@ -159,15 +159,19 @@ class CallCallback(pj.Call):
             return
 
         adm = pj.Endpoint.instance().audDevManager()
-        vdm = pj.Endpoint.instance().vidDevManager()
+        # vdm = pj.Endpoint.instance().vidDevManager()
         LOGGER.debug("Call to %r: media changed", ci.remoteUri)
         audio, video = self.__getAudioVideoMedia()
 
-        #TODO check if params changed?
-        if not video:
-            __params = pj.CallVidSetStreamParam()
-            __params.dir = pj.PJMEDIA_DIR_CAPTURE
-            self.vidSetStream(pj.PJSUA_CALL_VID_STRM_ADD, __params)
+        # TODO Although the video should be automatically started (config.account_config)
+        # it would be beneficial to check if it is actually running. Yet
+        # a corresponding hw/sw with no video capability would error out on this
+        # so there has to be a check accordingly, yet i couldn't decipher the source code in that regard
+
+        # if not video:
+        #     __params = pj.CallVidSetStreamParam()
+        #     __params.dir = pj.PJMEDIA_DIR_CAPTURE
+        #     self.vidSetStream(pj.PJSUA_CALL_VID_STRM_ADD, __params)
         if audio:
             # Connect call audio to speaker and microphone
             audio.startTransmit(adm.getPlaybackDevMedia())
