@@ -7,7 +7,7 @@ After=doorpi.socket
 [Service]
 Type=notify
 ExecStart=!!prefix!!/bin/doorpi --configfile !!cfgfile!!
-Restart=on-failure
+Restart=always
 NotifyAccess=all
 WatchdogSec=15s
 
