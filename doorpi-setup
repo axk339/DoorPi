@@ -20,7 +20,7 @@ GROUP=$(id -g -n "$USER")
 SWAP=$(cat /proc/meminfo | grep SwapTotal | awk '{print $2}')
 MEM=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
 TOTALMEM=$(expr $SWAP + $MEM)
-MINMEM=1571972
+MINMEM=1571840
 
 # Symlinked from PATH needs special handling
 [[ -L "${BASH_SOURCE[0]}" ]] && SRC_PATH=$( dirname $( readlink "${BASH_SOURCE[0]}" ) ) || SRC_PATH=$( dirname $( readlink -f "$0") )
@@ -43,10 +43,17 @@ ODBC_PACKAGE="https://github.com/mariadb-corporation/mariadb-connector-odbc"
 RTSP_PACKAGE="https://github.com/mpromonet/v4l2rtspserver.git"
 O264_PACKAGE="v2.2.0.tar.gz"
 PJSIP_PACKAGE="2.12.tar.gz"
-O264_VER=$(echo ${O264_PACKAGE%".tar.gz"} | cut -c 2-)
+O264_VER=${O264_PACKAGE%".tar.gz"}
+#O264_VER=$(echo ${O264_PACKAGE%".tar.gz"} | cut -c 2-)
 PJSIP_VER=${PJSIP_PACKAGE%".tar.gz"}
 
 ADDITIONAL_SYSTEM_REQUIREMENTS=""
+
+# Root Rechte überprüfen
+if [ "$EUID" -ne 0 ]; then
+    echo "Programm muss mit ROOT Rechten ausgeführt werden"
+    exit 1
+fi
 
 print_help () {
     echo "doorpi-setup help"
@@ -58,7 +65,7 @@ print_help () {
     echo "    -h               this help"
 }
 
-#The default is sending output to /dev/null, except in case -d or -l logfile
+#The default is sending output to /dev/null, except in case -v or -l logfile
 while getopts 'hvl:' FLAG; do
     case "$FLAG" in
         h) print_help;;
@@ -66,33 +73,22 @@ while getopts 'hvl:' FLAG; do
         v) VERBOSE=/dev/stdout;;
     esac
 done
-[[ -n $LOGFILE ]] && VERBOSE="$LOGFILE"
+
+[[ -n $LOGFILE ]] && VERBOSE="$LOGFILE" && touch "$LOGFILE"
+#TODO truncate logfile?
 out=${VERBOSE:-/dev/null}
 #[ Debug == 1 ] || set -x
-
-# Root Rechte überprüfen
-if [ "$EUID" -ne 0 ]; then
-    echo "Programm muss mit ROOT Rechten ausgeführt werden"
-    exit 1
-fi
-
-# Dialog variables
-RESOLUTION=( $(dialog --print-maxsize 3>&2 2>&1 1>&3 | awk '{print $2 $3}' | sed 's/,/ /') )
-read MAXY MAXX <<< "${RESOLUTION[*]}"
-MAINBOXX=60
-MAINBOXY=25
-INFOBOXX=140
-INFOBOXY=24
 
 #some dialog info descriptions
 MAIN_DESC="\nThis is the main Doorpi installer menu to get your Doorpi up and running. The modules are separated as you may wish to run with a smaller footprint (w/o Video, Samba, and services that might follow)\n\n\
 Fundamentals:\n\
-Doorpi Installation         - Core install and dependency for everything that follows\n\
+Doorpi Installation/Update  - Core install (or update if installed) and dependency for everything that follows\n\
 Asterisk Server             - In case relevant hardware/software is missing, add Asterisk support to route calls\n\
                               (NOTE: If you plan on use video calls its most likely a must)\n\
 Phone Config                - If spun up a local Asterisk server, configure Doorpi/Client phone entries.\n\
                               Depending on how many client phones you intend to set up, run this multiple times.\n\
-Sound Card Selector         - Sets the default card to use\n\n\
+Sound Card Selector         - Sets the default card to use\n\
+List Configured Phones      - A list of crucial variables and connection state with asterisk\n\n\
 Additions:\n\
 Video Support               - Builds the whole video stack to be able to use video SIP calls\n\
 RTSP Videoserver            - Adds a RTSP Stream Server. Especially useful if you want to capture your door video feed with different\n\
@@ -136,9 +132,10 @@ UNIX user           - the unix user doorpi runs under\n\
 UNIX group          - a unix group the doorpi user runs in\n\
 As server           - (yes/no) Main signifier if this is setup as Client or Server\n\
 Server access point - (Client only) uri from where the server should share its content\n\
+                      (NOTE: If any part of the uri contains spaces write them as underscores '_')\n\
 Valid users         - (Server only) as the server gets set up a user gets created and (with your doorpi user) put in the 'sambashare'\n\
                       group. So until you have special needs it should be run in default\n\n\
-                      (NOTE: Whether you install samba as client or server, the fields (even unnecessary) should stay populated.\n\n\
+(NOTE: Whether you install samba as client or server, the fields (even unnecessary) should stay populated.\n\n\
 [UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept ALL changes [ESC] Closes dialog"
 
 ## HELPER FUNCTIONS
@@ -185,35 +182,96 @@ containsElement () {
 
 choose () { echo ${1:RANDOM%${#1}:1} $RANDOM; }
 
-SwapCheck (){
+SwapCheck () {
+    echo "[SWAP]"
+    echo "Size check ..."
     if [ $TOTALMEM -lt $MINMEM ] ; then
-        sudo dphys-swapfile swapoff >> "$out" 2>&1
-        SWAPNEEDED=$(expr $(expr $MINMEM - $MEM) / 1024)
+        dphys-swapfile swapoff >> "$out" 2>&1
+        #round up
+        SWAPNEEDED=$(expr $(expr $MINMEM - $MEM + 1023 ) / 1024)
         echo "Swap needed $SWAPNEEDED Mb" >> "$out" 2>&1
-        sudo sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${SWAPNEEDED}/g" /etc/dphys-swapfile
-        sudo dphys-swapfile setup >> "$out" 2>&1
-        sudo dphys-swapfile swapon >> "$out" 2>&1
+        sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${SWAPNEEDED}/g" /etc/dphys-swapfile
+        dphys-swapfile setup >> "$out" 2>&1
+        dphys-swapfile swapon >> "$out" 2>&1
         echo "Swap size had to be raised - reboot in 10s"
         sleep 10
-        sudo systemctl --message="Swap size had to be raised" reboot >> "$out" 2>&1
+        systemctl --message="Swap size had to be raised" reboot >> "$out" 2>&1
         exit
     fi
+    echo "OK"
 }
 
-StartDaemon (){
+StartDaemon () {
     bckgrnd=$1
     set -e
-    sudo systemctl is-enabled --quiet smbd 2>/dev/null || sudo systemctl enable doorpi >> "$out" 2>&1
-    [[ -z $bckgrnd ]] && sudo systemctl start doorpi.service || sudo systemctl start doorpi.service &
+    systemctl is-enabled --quiet doorpi 2>/dev/null || systemctl enable doorpi >> "$out" 2>&1
+    if [[ -z $bckgrnd ]]; then
+        systemctl start doorpi.service
+    else
+        systemctl start doorpi.service &
+    fi
     set +e
-    touch ${TEMPDIR}/result && echo "\n Doorpi service enabled and started" > ${TEMPDIR}/result
+    touch ${TEMPDIR}/result && printf "\n Doorpi service enabled and started" > ${TEMPDIR}/result
 
 }
 
-StopDaemon (){
+StopDaemon () {
     [[ ! -d $BASE_PATH ]] && touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result && return
     systemctl stop doorpi >> "$out" 2>&1
-    touch ${TEMPDIR}/result && echo "\n Doorpi service stopped" > ${TEMPDIR}/result
+    touch ${TEMPDIR}/result && printf "\n Doorpi service stopped" > ${TEMPDIR}/result
+}
+
+SysInstaller () {
+    MODE=$1
+    if [[ "$MODE" != "updatelist" ]]; then
+        pkgs=$2[@]
+        PKGS=("${!pkgs}")
+    fi
+
+    if found_exe zypper ; then
+        INST_CMD="zypper install -y"
+    elif found_exe yum ; then
+        INST_CMD="yum install -y"
+        LUPDATE_CMD="yum update"
+    elif found_exe apt-get ; then
+        INST_CMD="apt-get install -y"
+        LUPDATE_CMD="apt-get update"
+        PKG_INSTALLED=( $( apt list --installed 2>/dev/null | awk -F/ '{print $1}' ) )
+    elif found_exe dnf ; then
+        INST_CMD="dnf install -y"
+        LUPDATE_CMD="dnf update"
+    elif found_exe pacman ; then
+        INST_CMD="pacman -S --needed --noconfirm"
+        LUPDATE_CMD="pacman -Sy"
+    elif found_exe emerge ; then
+        INST_CMD="emerge --noreplace"
+        LUPDATE_CMD=""
+    elif found_exe apk ; then
+        INST_CMD="apk add --virtual"
+        LUPDATE_CMD="apk update"
+    fi
+
+    if [[ $MODE == "updatelist" ]]; then
+        echo "update package list ..."
+        ${LUPDATE_CMD} >> "$out" 2>&1
+
+    elif [[ $MODE == "install" ]]; then
+        [[ -n $VERBOSE ]] && printf "Check System Dependencies ...\n\n"
+        set -e
+        if [[ -z $VERBOSE ]]; then
+            for pkg in "${PKGS[@]}"
+            do
+                if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
+                    echo "... installing ${pkg}"
+                    ${INST_CMD} ${pkg} 1>/dev/null
+                fi
+            done
+        else
+            ${INST_CMD} "${PKGS[@]}" >> "$out" 2>&1
+        fi
+        set +e
+    fi
+
 }
 
 ## MAIN MODULES
@@ -237,39 +295,33 @@ EOF
 
     if found_exe zypper ; then
         # OpenSUSE
-        sudo zypper install -y git python3 python3-devel dialog v4l2loopback-autoload v4l2loopback-kmp-default v4l2loopback-utils >> "$out" 2>&1
+        PKGS=(git python3 python3-devel dialog v4l2loopback-autoload v4l2loopback-kmp-default v4l2loopback-utils)
     elif found_exe yum && os_is centos ; then
         # CentOS
-        sudo yum update 1>/dev/null
-        sudo yum install epel-release
-        sudo yum install -y cmake git python3-devel python3-pip dialog curl >> "$out" 2>&1
+        PKGS=(cmake git python3-devel python3-pip dialog curl)
     elif found_exe yum && os_is rhel ; then
         # Redhat Enterprise Linux
-        sudo yum update 1>/dev/null
-        sudo yum install -y cmake git python3-devel dialog curl >> "$out" 2>&1
+        PKGS=(cmake git python3-devel dialog curl)
     elif os_is_like debian || os_is debian || os_is_like ubuntu || os_is ubuntu || os_is linuxmint; then
         # Debian / Ubuntu / Mint
-        sudo apt-get update 1>/dev/null
-        sudo apt-get install -y git python3 python3-pip python3-dev python3-setuptools dialog curl v4l2loopback-dkms v4l2loopback-utils >> "$out" 2>&1
+        PKGS=(wget git build-essential make cmake autoconf automake libtool pkg-config python3 python3-pip python3-dev python3-setuptools python3-zeroconf dialog curl v4l2loopback-dkms v4l2loopback-utils)
     elif os_is_like fedora || os_is fedora; then
         # Fedora
-        sudo dnf update 1>/dev/null
-        sudo dnf install -y git python3 python3-devel python3-pip python3-setuptools python3-virtualenv dialog curl v4l2loopback kmod-v4l2loopback >> "$out" 2>&1
+        PKGS=(git python3 python3-devel python3-pip python3-setuptools python3-virtualenv dialog curl v4l2loopback kmod-v4l2loopback)
     elif found_exe pacman && (os_is arch || os_is_like arch); then
-        # Arch Linux
-        sudo pacman -S --needed --noconfirm git python python-pip python-setuptools python-virtualenv dialog curl v4l2loopback-dkms v4l2loopback-utils >> "$out" 2>&1
+        PKGS=(git python python-pip python-setuptools python-virtualenv dialog curl v4l2loopback-dkms v4l2loopback-utils)
     elif found_exe emerge && os_is gentoo; then
-        # Gentoo Linux
-        sudo emerge --noreplace dev-vcs/git dev-lang/python dev-python/setuptools dev-python/requests dev-util/dialog >> "$out" 2>&1
+        PKGS=(dev-vcs/git dev-lang/python dev-python/setuptools dev-python/requests dev-util/dialog)
     elif found_exe apk && os_is alpine; then
         # Alpine Linux
-        sudo apk update 1>/dev/null
-        sudo apk add --virtual git python3 py3-pip py3-setuptools py3-virtualenv dialog curl >> "$out" 2>&1
+        PKGS=(git python3 py3-pip py3-setuptools py3-virtualenv dialog curl)
     else
     	echo
         echo "Could not find package manager. Make sure to manually install: git python3 python-setuptools python-venv \n"
         exit 1
     fi
+
+    SysInstaller install PKGS
 
     #TODO user install -> add PATH
     curl -s "${GET_PIP_URL}" | "/bin/python3" - >> "$out" 2>&1
@@ -296,6 +348,7 @@ prepare_install () {
     CONFIG_FILE="$CONFIG_DIR"/"$PROJECT".ini
     MNT_DIR="$WORKING_DIR"/mnt
     SRC_DIR="$WORKING_DIR"/src
+    BKP_DIR="$WORKING_DIR"/backup
     LOG_FILE=/var/log/"$PROJECT"/"$PROJECT".log
     LOG_DIR=/var/log/"$PROJECT"
 
@@ -309,67 +362,55 @@ prepare_install () {
     substkeys["!!user!!"]="$USER"
     substkeys["!!group!!"]="$GROUP"
 
-    for FILE in "$DATADIR"/* ; do
-        destination="${DATA_DESTINATION[$( basename "$FILE")]}"
+    for _PATH in "$DATADIR"/* ; do
+        FILE=$( basename "$_PATH" )
+        destination="${DATA_DESTINATION[$FILE]}"
+        cp "$DATADIR"/"$FILE" "$TEMPDIR"/
         for v in "${!substkeys[@]}"; do
             if [[ "$FILE" == *.in ]] ; then
-                sed -i "s|$v|${substkeys[$v]}|g" "$FILE"
+                sed -i "s|$v|${substkeys[$v]}|g" "$TEMPDIR"/"$FILE"
             fi
         done
         if [[ -n $destination ]] ; then
-            [[ ! -d $destination ]] && sudo mkdir -p $(dirname "$destination")
-            sudo cp "$FILE" "$destination"
+            [[ ! -d $destination ]] && mkdir -p $(dirname "$destination")
+            mv "$TEMPDIR"/"$FILE" "$destination"
         fi
+        rm "$TEMPDIR"/"$FILE"
     done
 
-    for folder in "$CONFIG_DIR" "$MNT_DIR" "$LOG_DIR" "$SRC_DIR"; do
-        [[ $folder != /home/* ]] && USE_SUDO=1
-        if [ $USE_SUDO -eq 1 ]; then
-            $sudo mkdir -p "$folder"
-            USE_SUDO=""
-        else
-            mkdir -p "$folder"
-        fi
+    for folder in "$CONFIG_DIR" "$MNT_DIR" "$LOG_DIR" "$SRC_DIR" "$BKP_DIR"; do
+        mkdir -p "$folder"
     done
 
     if [ ! -f "$CONFIG_FILE" ]; then
-        [[ "$CONFIG_FILE" != /home/* ]] && USE_SUDO=1
-        if [ $USE_SUDO -eq 1 ]; then
-            $sudo touch "$CONFIG_FILE"
-            echo 'base_path = "'"$WORKING_DIR"'"' | $sudo tee $CONFIG_FILE > /dev/null 2>&1
-            USE_SUDO=""
-        else
-            touch "$CONFIG_FILE"
-            echo 'base_path = "'"$WORKING_DIR"'"' > $CONFIG_FILE
-        fi
+        touch "$CONFIG_FILE"
+        echo 'base_path = "'"$WORKING_DIR"'"' | tee "$CONFIG_FILE" > /dev/null 2>&1
     fi
 
     #setup a virtual loopback device
-    echo "#config v4l2loopback module" > "out" 2>&1
+    echo "#config v4l2loopback module" >> "$out" 2>&1
     if ! grep -q "^v4l2loopback" /etc/modules; then
         printf "v4l2loopback\n" >> /etc/modules
     fi
     echo 'options v4l2loopback devices=1
 options v4l2loopback max_buffers=2
 options v4l2loopback exclusive_caps=1
-options v4l2loopback card_label="VirtualDoorpiCam #1"' | sudo tee /etc/modprobe.d/v4l2loopback.conf > "out" 2>&1
+options v4l2loopback card_label="VirtualDoorpiCam #1"' | tee /etc/modprobe.d/v4l2loopback.conf >> "$out" 2>&1
 
     #TODO systemd notify socket (changed with move to user installs)
-    echo "export NOTIFY_SOCKET=[::]:50317" > /root/.bashrc
+    if ! grep -q "^NOTIFY_SOCKET" /etc/modules; then
+        echo "export NOTIFY_SOCKET=[::]:50317" >> /root/.bashrc
+    fi
 
-    echo "#Working directory" > "out" 2>&1
-    echo "$WORKING_DIR" | tee "$SRC_PATH"/.env > "out" 2>&1
+    echo "#Working directory" >> "$out" 2>&1
+    echo "$WORKING_DIR" | tee "$SRC_PATH"/.env >> "$out" 2>&1
+    BASE_PATH="$WORKING_DIR"
 }
 
 AsteriskDeps () {
-    echo "[System Dependencies]
-"
     if os_is_like debian || os_is debian || os_is_like ubuntu || os_is ubuntu || os_is linuxmint; then
         # Debian / Ubuntu / Mint
-        PACKAGE_LIST=(asterisk mariadb-server unixodbc unixodbc-dev python3-mysqldb)
-        INST_CMD="sudo apt-get install -y"
-        PKG_INSTALLED=($(sudo apt list --installed 2>/dev/null | awk -F/ '{print $1}'))
-        sudo apt-get update 1>/dev/null
+        PACKAGE_LIST=(asterisk mariadb-server unixodbc unixodbc-dev python3-mysqldb libssl-dev)
     else
         echo "The packages for your system are not yet defined. You may want to check the needed libraries"
         echo "and send a PR with the libraries found on your system"
@@ -379,34 +420,17 @@ AsteriskDeps () {
         exit
     fi
 
-    set -e
-    echo "... checking dependencies"
-    if [[ -z $VERBOSE]]; then
-        for pkg in "${PACKAGE_LIST[@]}"
-        do
-            if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
-                echo "... installing ${pkg}"
-                ${INST_CMD} ${pkg} 1>/dev/null
-            fi
-        done
-    else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
-    fi
-    set +e
-    echo "
-Done ckecking dependencies
-"
+    SysInstaller install PACKAGE_LIST
+    pip install alembic >> "$out" 2>&1
 }
 
 VideoDeps () {
-    echo "[System Dependencies]
-"
     if os_is_like debian || os_is debian || os_is_like ubuntu || os_is ubuntu || os_is linuxmint; then
         # Debian / Ubuntu / Mint
         PACKAGE_LIST=(libtool pkg-config libasound2-dev libpulse-dev libaudio-dev libjack-dev \
         libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev \
         libxinerama-dev libxxf86vm-dev libxss-dev libgl1-mesa-dev libdbus-1-dev \
-        libudev-dev libgles2-mesa-dev libegl1-mesa-dev libibus-1.0-dev \
+        libudev-dev libgles2-mesa-dev libegl1-mesa-dev libegl-mesa0 libibus-1.0-dev \
         fcitx-libs-dev libsamplerate0-dev libsndio-dev libwayland-dev \
         libxkbcommon-dev libdrm-dev libgbm-dev libraspberrypi0 libraspberrypi-bin libraspberrypi-dev \
         libzrtpcpp-dev libxext-dev libpcre3-dev libtool libccrtp-dev libdbus-c++-dev libcommoncpp2-dev \
@@ -414,10 +438,7 @@ VideoDeps () {
         libgmp3-dev libmpfr-dev libmpfr-doc libmpc-dev libffi-dev libmp3lame-dev libvorbis-dev libtheora-dev yasm nasm \
         libopencore-amrwb-dev libopencore-amrnb-dev libvo-amrwbenc-dev libgsm1-dev opus-tools libopus-dev \
         libass-dev libfreetype6-dev libva-dev libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev \
-        libxcb-xfixes0-dev meson ninja-build texinfo wget zlib1g-dev libsdl2-dev vpx-tools libvpx-dev libvpx6 x264)
-        INST_CMD="sudo apt-get install -y"
-        PKG_INSTALLED=($(sudo apt list --installed 2>/dev/null | awk -F/ '{print $1}'))
-        sudo apt-get update 1>/dev/null
+        libxcb-xfixes0-dev zlib1g-dev libsdl2-dev vpx-tools libvpx-dev libvpx6 x264 xterm)
     else
         echo "The packages for your system are not yet defined. You may want to check the needed libraries"
         echo "and send a PR with the libraries found on your system"
@@ -428,48 +449,41 @@ VideoDeps () {
     fi
 
     set -e
-    echo "... checking dependencies"
     #check if camera is activated in the pi config
     #we dont want to use libcamera here (lacks integration)
-    sudo sed -i "s/^camera_auto_detect=/#camera_auto_detect=/" $CONFIG
-    #be sure that [all] is at the end of the file ( not [cm4],... )
-    [[ -z $( cat $CONFIG | awk 'END { print }' | grep '\[all\]') ]] && echo "[all]" | sudo tee -a $CONFIG
+    sed -i "s/^camera_auto_detect=/#camera_auto_detect=/" $CONFIG
+    #be sure that [all] is the end paragraph ( not [cm4],... )
+    if ! grep -c "\[all\]" <<< $(awk -v RS="" ' { str=$0 } END { print str } ' "$CONFIG") > /dev/null 2>&1; then
+        printf "\n[all]\n" >> "$CONFIG"
+    fi
+    if ! grep -c "gpu_mem=" <<< $(awk -v RS="" ' { str=$0 } END { print str } ' "$CONFIG") > /dev/null 2>&1; then
+        printf "gpu_mem=\n" >> "$CONFIG"
+    fi
     set_pi_config_var start_x 1 $CONFIG
-    sudo sed -i "s/^gpu_mem=/#gpu_mem=/" $CONFIG
-    echo "gpu_mem=128" | sudo tee -a $CONFIG
+    set_pi_config_var gpu_mem 128 $CONFIG
 
     #check if camera module is present in /etc/modules
     if ! grep -q "^bcm2835-v4l2" /etc/modules; then
         printf "bcm2835-v4l2\n" >> /etc/modules
     fi
+    modprobe bcm2835-v4l2
 
-    if [[ -z $VERBOSE ]]; then
-        for pkg in "${PACKAGE_LIST[@]}"
-        do
-            if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
-                echo "... installing ${pkg}"
-                ${INST_CMD} ${pkg} 1>/dev/null
-            fi
-        done
-    else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
+    #patch systemd service
+    if ! grep -q "^ExecStart=xinit" ${DATA_DESTINATION["doorpi.service.in"]}; then
+        sed -i 's/^ExecStart=/&xinit /' ${DATA_DESTINATION["doorpi.service.in"]}
+        systemctl daemon-reload
     fi
-    pip install alembic >> "$out" 2>&1
+
     set +e
-    echo "
-Done ckecking dependencies
-"
+
+    SysInstaller install PACKAGE_LIST
+
 }
 
 VideoserverDeps () {
-    echo "[System Dependencies]
-"
     if os_is_like debian || os_is debian || os_is_like ubuntu || os_is ubuntu || os_is linuxmint; then
         # Debian / Ubuntu / Mint
         PACKAGE_LIST=(liblog4cpp5-dev libv4l-dev)
-        INST_CMD="sudo apt-get install -y"
-        PKG_INSTALLED=($(sudo apt list --installed 2>/dev/null | awk -F/ '{print $1}'))
-        sudo apt-get update 1>/dev/null
     else
         echo "The packages for your system are not yet defined. You may want to check the needed libraries"
         echo "and send a PR with the libraries found on your system"
@@ -479,34 +493,14 @@ VideoserverDeps () {
         exit
     fi
 
-    set -e
-    echo "... checking dependencies"
-    if [[ -z $VERBOSE ]]; then
-        for pkg in "${PACKAGE_LIST[@]}"
-        do
-            if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
-                echo "... installing ${pkg}"
-                ${INST_CMD} ${pkg} 1>/dev/null
-            fi
-        done
-    else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
-    fi
-    set +e
-    echo "
-Done ckecking dependencies
-"
+    SysInstaller install PACKAGE_LIST
+
 }
 
 SambaDeps (){
-    echo "[System Dependencies]
-"
     if os_is_like debian || os_is debian || os_is_like ubuntu || os_is ubuntu || os_is linuxmint; then
         # Debian / Ubuntu / Mint
         PACKAGE_LIST=(samba samba-common smbclient)
-        INST_CMD="sudo apt-get install -y"
-        PKG_INSTALLED=($(sudo apt list --installed 2>/dev/null | awk -F/ '{print $1}'))
-        sudo apt-get update 1>/dev/null
     else
         echo "The packages for your system are not yet defined. You may want to check the needed libraries"
         echo "and send a PR with the libraries found on your system"
@@ -516,39 +510,26 @@ SambaDeps (){
         exit
     fi
 
+    SysInstaller install PACKAGE_LIST
+
     set -e
-    echo "... checking dependencies"
-    if [[ -z $VERBOSE ]]; then
-        for pkg in "${PACKAGE_LIST[@]}"
-        do
-            if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
-                echo "... installing ${pkg}"
-                ${INST_CMD} ${pkg} 1>/dev/null
-            fi
-        done
-    else
-        ${INST_CMD} "${PACKAGE_LIST[@]}" >> "$out" 2>&1
-    fi
-    sudo systemctl is-enabled --quiet smbd 2>/dev/null || sudo systemctl enable smbd >> "$out" 2>&1
-    sudo systemctl is-enabled --quiet nsmbd 2>/dev/null || sudo systemctl enable nmbd >> "$out" 2>&1
+    systemctl is-enabled --quiet smbd 2>/dev/null || systemctl enable smbd >> "$out" 2>&1
+    systemctl is-enabled --quiet nsmbd 2>/dev/null || systemctl enable nmbd >> "$out" 2>&1
     set +e
-    echo "
-Done ckecking dependencies
-"
+
 }
 
 BuildH264 () {
     set -e
     cd ${TEMPDIR}
-    echo "[OpenH264]
-"
-    if [[ ! -d openh264 ]]; then
+    echo "
+[OpenH264]"
+    if [[ ! -d $TEMPDIR/openh264 ]]; then
         echo "... Downloading OpenH264 package"
-        git clone https://github.com/cisco/openh264 >> "$out" 2>&1
-        cd openh264
-        git checkout openh264${O264_VER} >> "$out" 2>&1
+        git clone --progress https://github.com/cisco/openh264 >> "$out" 2>&1
     fi
     cd openh264
+    git checkout openh264${O264_VER} >> "$out" 2>&1
     # in case of not debugging inhibit warnings
     if [[ -z $VERBOSE ]]; then
        sed -i "s/^CFLAGS_OPT=-O3$/CFLAGS_OPT=-O3 -w/" Makefile
@@ -560,9 +541,9 @@ BuildH264 () {
     echo "... Building package"
     make -j`nproc` >> "$out" 2>&1
     echo "... Installing package"
-    sudo make install >> "$out" 2>&1
+    make install >> "$out" 2>&1
     cd ${TEMPDIR} && rm -rf openh264
-    sudo ldconfig
+    ldconfig
     echo "
 Done building OpenH264
 "
@@ -570,11 +551,11 @@ Done building OpenH264
 }
 
 BuildPJSIP () {
+    set -e
     cd ${TEMPDIR}
-    echo "[PJSIP]
-"
+    echo "[PJSIP] (This is taking the bulk of the build time - 40 min+)"
     if [[ ! -f $PJSIP_PACKAGE ]]; then
-        echo "... Downloading OpenH264 package"
+        echo "... Downloading pjproject package"
         wget https://github.com/pjsip/pjproject/archive/refs/tags/${PJSIP_PACKAGE} >> "$out" 2>&1
     fi
     if [[ ! -d pjproject-${PJSIP_VER} ]]; then
@@ -625,32 +606,28 @@ export LDFLGS +=" > user.mak
     echo "... Configuring build"
     ./configure --enable-shared >> "$out" 2>&1
     make dep >> "$out" 2>&1
-    echo "done"
-    echo "... Building package"
+    echo "... Building library"
     make -j`nproc` >> "$out" 2>&1
-    echo "done"
-    echo "... Installing package"
-    sudo make install >> "$out" 2>&1
-    echo "done"
+    echo "... Installing library"
+    make install >> "$out" 2>&1
     cd pjsip-apps/src/swig/python
-    echo "... Building python package"
+    echo "... Building python package (pjsua2)"
     if [[ -z $VERBOSE ]]; then
         sed -i "s|\$(PYTHON_EXE) setup.py build \$(PYTHON_SETUP_FLAGS)|\$(PYTHON_EXE) setup.py -q build \$(PYTHON_SETUP_FLAGS)|" Makefile
     else
         sed -i "s|\$(PYTHON_EXE) setup.py -q build \$(PYTHON_SETUP_FLAGS)|\$(PYTHON_EXE) setup.py build \$(PYTHON_SETUP_FLAGS)|" Makefile
     fi
     make >> "$out" 2>&1
-    echo "done"
     echo "... Installing python package"
     pip install . >> "$out" 2>&1
-    echo "done"
     cd ${TEMPDIR}
-    sudo rm -rf pjproject-${PJSIP_VER}
+    rm -rf pjproject-${PJSIP_VER}
     rm ${PJSIP_PACKAGE}
-    sudo ldconfig
+    ldconfig
     echo "
 Done building PJSIP
 "
+    set +e
 }
 
 ConfigAsterisk () {
@@ -658,79 +635,86 @@ ConfigAsterisk () {
     vars=("${!name}")
     read ROOTPW DBNAME DBPW DBUSER <<< "${vars[*]}"
 
+    set -e
     cd ${TEMPDIR}
     echo "[Asterisk] (Realtime configuration)
 "
-    echo "... building ODBC"
-    git clone ${ASTERISK_PACKAGE} >> "$out" 2>&1
-    git clone ${ODBC_PACKAGE} >> "$out" 2>&1
-    cd mariadb-connector-odbc
-    git checkout tags/3.1.15 >> "$out" 2>&1
-    mkdir build
-    cd build
-    if [ "$(uname -m)" = "aarch64" ]; then
-        DDM_DIR=/usr/lib/aarch64-linux-gnu
-    else
-        DDM_DIR=/usr/lib/arm-linux-gnueabihf
-    fi
-    cmake ../ -Wno-dev -LH -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_SSL=OPENSSL\
-     -DDM_DIR="${DDM_DIR}" -DCMAKE_C_FLAGS_RELEASE:STRING="-w" >> "$out" 2>&1
-    cmake --build . --config Release >> "$out" 2>&1
-    sudo make install >> "$out" 2>&1
-    cd ${TEMPDIR}
-    rm -rf mariadb-connector-odbc
-    sudo ldconfig
-    echo "done"
-
-    DB_EXIST=$( sudo mysqlshow | grep "$DBNAME" )
-    if [[ -z $DB_EXIST ]]; then
-        echo "... setting up database"
-        sudo mysql -uroot -p${ROOTPW} -e "CREATE DATABASE ${DBNAME} /*\!40100 DEFAULT CHARACTER SET utf8 */;" >> "$out" 2>&1
-        sudo mysql -uroot -p${ROOTPW} -e "CREATE USER ${DBUSER}@localhost IDENTIFIED BY '${DBPW}';" >> "$out" 2>&1
-        sudo mysql -uroot -p${ROOTPW} -e "GRANT ALL PRIVILEGES ON $DBNAME.* TO '$DBUSER'@'localhost';" >> "$out" 2>&1
-        sudo mysql -uroot -p${ROOTPW} -e "FLUSH PRIVILEGES;" >> "$out" 2>&1
+    if [[ ! -f /usr/local/bin/mariadb_config ]]; then
+        echo "... building ODBC"
+        [[ ! -d $TEMPDIR/asterisk ]] && git clone --progress ${ASTERISK_PACKAGE} >> "$out" 2>&1
+        [[ ! -d $TEMPDIR/mariadb-connector-odbc ]] && git clone --progress ${ODBC_PACKAGE} >> "$out" 2>&1
+        cd mariadb-connector-odbc
+        git checkout tags/3.1.15 >> "$out" 2>&1
+        [[ -d build ]] && rm -rf build
+        mkdir build
+        cd build
+        if [ "$(uname -m)" = "aarch64" ]; then
+            DDM_DIR=/usr/lib/aarch64-linux-gnu
+        else
+            DDM_DIR=/usr/lib/arm-linux-gnueabihf
+        fi
+        cmake ../ -Wno-dev -LH -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DWITH_SSL=OPENSSL \
+    -DDM_DIR="${DDM_DIR}" -DCMAKE_C_FLAGS_RELEASE:STRING="-w" >> "$out" 2>&1
+        cmake --build . --config Release >> "$out" 2>&1
+        make install >> "$out" 2>&1
+        cd ${TEMPDIR}
+        rm -rf mariadb-connector-odbc
+        ldconfig
         echo "done"
     fi
 
-    echo "... configuring asterisk"
-    LIBPATH1=$(sudo find / -name libmaodbc.so | awk '{print $1}')
-    LIBPATH2=$(sudo find / -name libodbcmyS.so | awk '{print $1}')
-    [[ -f /etc/odbcinst.ini ]] && [[ ! -f /etc/odbcinst.ini.old ]] && sudo cp /etc/odbcinst.ini /etc/odbcinst.ini.old
-    [[ -z $(cat /etc/odbcinst.ini | grep '\[MariaDB\]' ) ]] && echo "[MariaDB]
+    #actually no clue why it would exit without set +e here
+    set +e
+    DB_EXIST=$( mysqlshow | grep "$DBNAME" )
+    set -e
+    if [[ -z $DB_EXIST ]]; then
+        echo "... setting up database" && echo "#Database priming" >> "$out" 2>&1
+        mysql -uroot -p"$ROOTPW" -e "CREATE DATABASE $DBNAME /*\!40100 DEFAULT CHARACTER SET utf8 */;" >> "$out" 2>&1
+        mysql -uroot -p"$ROOTPW" -e "CREATE USER $DBUSER@localhost IDENTIFIED BY '$DBPW';" >> "$out" 2>&1
+        mysql -uroot -p"$ROOTPW" -e "GRANT ALL PRIVILEGES ON $DBNAME.* TO '$DBUSER'@'localhost';" >> "$out" 2>&1
+        mysql -uroot -p"$ROOTPW" -e "FLUSH PRIVILEGES;" >> "$out" 2>&1
+        DB_EXIST=1
+        echo "done"
+    fi
+
+    echo "... configuring asterisk" && echo "#Asterisk config" >> "$out" 2>&1
+    LIBPATH1=$(find / -name libmaodbc.so 2> /dev/null | awk '{print $1}')
+    LIBPATH2=$(find / -name libodbcmyS.so 2> /dev/null | awk '{print $1}')
+    [[ -f /etc/odbcinst.ini ]] && [[ ! -f /etc/odbcinst.ini.orig ]] && cp /etc/odbcinst.ini /etc/odbcinst.ini.orig
+    [[ $(grep -c "\[MariaDB\]" /etc/odbcinst.ini 2> /dev/null) -eq 0 ]] && echo "#/etc/odbcinst.ini" >> "$out" 2>&1 && echo "[MariaDB]
 Description=ODBC for MariaDB
 Driver=$LIBPATH1
 Setup=$LIBPATH2
-UsageCount=1" | sudo tee /etc/odbcinst.ini >> "$out" 2>&1
+UsageCount=1" | tee /etc/odbcinst.ini >> "$out" 2>&1
 
-    [[ -f /etc/odbc.ini ]] && [[ ! -f /etc/odbc.ini.old ]] && sudo cp /etc/odbc.ini /etc/odbc.ini.old
-    SOCKPATH=$(sudo find / -name mysqld.sock | awk '{print $1}')
-    [[ -z $(cat /etc/odbc.ini | grep "\[$DBUSER\]" ) ]] && echo "[${DBUSER}]
+    [[ -f /etc/odbc.ini ]] && [[ ! -f /etc/odbc.ini.orig ]] && cp /etc/odbc.ini /etc/odbc.ini.orig
+    SOCKPATH=$(find / -name mysqld.sock 2> /dev/null | awk '{print $1}')
+
+    [[ $(grep -c "\[$DBUSER\]" /etc/odbc.ini) -eq 0 ]] && echo "#/etc/odbc.ini" >> "$out" 2>&1 && echo "[${DBUSER}]
 Description = MySQL connection to 'asterisk' database
 Driver = MariaDB
 Database = ${DBNAME}
 Server = localhost
 Port = 3306
-Socket = $SOCKPATH" | sudo tee -a /etc/odbc.ini >> "$out" 2>&1
+Socket = $SOCKPATH" | tee -a /etc/odbc.ini >> "$out" 2>&1
 
-    [[ ! -f /etc/asterisk/res_odbc.conf.old ]] && sudo cp /etc/asterisk/res_odbc.conf /etc/asterisk/res_odbc.conf.old
-    #always start fresh
-    [[ -f /etc/asterisk/res_odbc.conf.old ]] && sudo cp /etc/asterisk/res_odbc.conf.old /etc/asterisk/res_odbc.conf
-    sudo sed -i "0,/^enabled.*/{s/^enabled.*/enabled = yes/g}" /etc/asterisk/res_odbc.conf
-    sudo sed -i "s/^;username.*/username = $DBUSER/g" /etc/asterisk/res_odbc.conf
-    sudo sed -i "s/^;password.*/password = $DBPW/g" /etc/asterisk/res_odbc.conf
-    sudo sed -i "s/^;logging.*/logging => yes/g" /etc/asterisk/res_odbc.conf
+    [[ ! -f /etc/asterisk/res_odbc.conf.orig ]] && cp /etc/asterisk/res_odbc.conf /etc/asterisk/res_odbc.conf.orig
+    sed -i -e '/\[asterisk\]/,/^$/{//!s/^enabled => no/enabled => yes/' -e '}' /etc/asterisk/res_odbc.conf
+    sed -i "s/^;\{0,1\}username.*/username => $DBUSER/g" /etc/asterisk/res_odbc.conf
+    sed -i "s/^;\{0,1\}password.*/password => $DBPW/g" /etc/asterisk/res_odbc.conf
+    sed -i "s/^;logging.*/logging => yes/g" /etc/asterisk/res_odbc.conf
 
-    if [[ -n $DB_EXIST ]] && [[ -z $( sudo mysql -u$DBUSER -p$DBPW -D$DBNAME -e 'SHOW TABLES LIKE "ps_auths"' ) ]]; then
-        echo "... Populate database"
+    if [[ -n $DB_EXIST ]] && [[ -z $( mysql -u"$DBUSER" -p"$DBPW" -D"$DBNAME" -e 'SHOW TABLES LIKE "ps_auths"' ) ]]; then
+        echo "... Populate database" && echo "#Alembic database population" >> "$out" 2>&1
         cd ${TEMPDIR}/asterisk/contrib/ast-db-manage/
-        mv config.ini.sample config.ini
+        [[ ! -f config.ini ]] && mv config.ini.sample config.ini
         sed -i "s/^sqlalchemy.url.*/sqlalchemy.url = mysql:\/\/$DBUSER:$DBPW@localhost\/$DBNAME/g" config.ini
         alembic -c config.ini upgrade head >> "$out" 2>&1
         echo "done"
     fi
 
-    [[ ! -f /etc/asterisk/sorcery.conf.old ]] && sudo cp /etc/asterisk/sorcery.conf /etc/asterisk/sorcery.conf.old
-    [[ -z $( sudo cat /etc/asterisk/sorcery.conf | grep '^\[res_pjsip\]' ) ]] && echo "
+    [[ ! -f /etc/asterisk/sorcery.conf.orig ]] && cp /etc/asterisk/sorcery.conf /etc/asterisk/sorcery.conf.orig
+    [[ $(grep -c '^\[res_pjsip\]' /etc/asterisk/sorcery.conf) -eq 0 ]] && echo "#/etc/asterisk/sorcery.conf" >> "$out" 2>&1 && echo "
 [res_pjsip]
 endpoint=realtime,ps_endpoints
 auth=realtime,ps_auths
@@ -739,42 +723,45 @@ domain_alias=realtime,ps_domain_aliases
 contact=realtime,ps_contacts
 
 [res_pjsip_endpoint_identifier_ip]
-identify=realtime,ps_endpoint_id_ips" | sudo tee -a /etc/asterisk/sorcery.conf >> "$out" 2>&1
+identify=realtime,ps_endpoint_id_ips" | tee -a /etc/asterisk/sorcery.conf >> "$out" 2>&1
 
-    [[ ! -f /etc/asterisk/extconfig.conf.old ]] && sudo cp /etc/asterisk/extconfig.conf /etc/asterisk/extconfig.conf.old
-    #always start fresh
-    [[ -f /etc/asterisk/extconfig.conf.old ]] && sudo cp /etc/asterisk/extconfig.conf.old /etc/asterisk/extconfig.conf
-    sudo sed -i "s/^;ps_endpoints.*/ps_endpoints => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
-    sudo sed -i "s/^;ps_auths.*/ps_auths => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
-    sudo sed -i "s/^;ps_aors.*/ps_aors => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
-    sudo sed -i "s/^;ps_domain_aliases.*/ps_domain_aliases => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
-    sudo sed -i "s/^;ps_endpoint_id_ips.*/ps_endpoint_id_ips => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
-    echo "ps_contacts => odbc,$DBUSER" | sudo tee -a /etc/asterisk/extconfig.conf >> "$out" 2>&1
+    [[ ! -f /etc/asterisk/extconfig.conf.orig ]] && cp /etc/asterisk/extconfig.conf /etc/asterisk/extconfig.conf.orig
+    sed -i "s/^;\{0,1\}ps_endpoints.*/ps_endpoints => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
+    sed -i "s/^;\{0,1\}ps_auths.*/ps_auths => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
+    sed -i "s/^;\{0,1\}ps_aors.*/ps_aors => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
+    sed -i "s/^;\{0,1\}ps_domain_aliases.*/ps_domain_aliases => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
+    sed -i "s/^;\{0,1\}ps_endpoint_id_ips.*/ps_endpoint_id_ips => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
+    if grep "ps_contacts => odbc," /etc/asterisk/extconfig.conf; then
+        sed -i "s/^ps_contacts => odbc,.*/ps_contacts => odbc,$DBUSER/g" /etc/asterisk/extconfig.conf
+    else
+        echo "ps_contacts => odbc,$DBUSER" | tee -a /etc/asterisk/extconfig.conf >> "$out" 2>&1
+    fi
 
-    [[ ! -f /etc/asterisk/modules.conf.old ]] && sudo cp /etc/asterisk/modules.conf /etc/asterisk/modules.conf.old
-    #always start fresh
-    [[ -f /etc/asterisk/modules.conf.old ]] && sudo cp /etc/asterisk/modules.conf.old /etc/asterisk/modules.conf
-    sudo sed -i "s/^;preload => res_odbc.so/preload => res_odbc.so/g" /etc/asterisk/modules.conf
-    sudo sed -i "s/^noload => res_config_odbc.so/;noload => res_config_odbc.so/g" /etc/asterisk/modules.conf
-    sudo sed -i "s/^;preload => res_config_odbc.so/preload => res_config_odbc.so/g" /etc/asterisk/modules.conf
-    sudo sed -i '/; Module names listed in "global".*/i\; Prevent the old chan_sip channel driver from loading, if you are only worried about PJSIP.\n;\nnoload => chan_sip.so\n;' /etc/asterisk/modules.conf
+    if [[ ! -f /etc/asterisk/modules.conf.orig ]]; then
+        cp /etc/asterisk/modules.conf /etc/asterisk/modules.conf.old
+        sed -i "s/^;preload => res_odbc.so/preload => res_odbc.so/g" /etc/asterisk/modules.conf
+        sed -i "s/^noload => res_config_odbc.so/;noload => res_config_odbc.so/g" /etc/asterisk/modules.conf
+        sed -i "s/^;preload => res_config_odbc.so/preload => res_config_odbc.so/g" /etc/asterisk/modules.conf
+        sed -i '/; Module names listed in "global".*/i\; Prevent the old chan_sip channel driver from loading, if you are only worried about PJSIP.\n;\nnoload => chan_sip.so\n;' /etc/asterisk/modules.conf
+    fi
 
-    [[ ! -f /etc/asterisk/pjsip.conf.old ]] && sudo cp /etc/asterisk/pjsip.conf /etc/asterisk/pjsip.conf.old
-    #always start fresh
-    [[ -f /etc/asterisk/pjsip.conf.old ]] && sudo cp /etc/asterisk/pjsip.conf.old /etc/asterisk/pjsip.conf
-    sudo sed -i "s/^;\[transport-udp\]/[transport-udp]/g" /etc/asterisk/pjsip.conf
-    sudo sed -i "0,/^;type=transport.*/{s/^;type=transport.*/type=transport/g}" /etc/asterisk/pjsip.conf
-    sudo sed -i "0,/^;protocol=udp.*/{s/^;protocol=udp.*/protocol=udp    ;udp,tcp,tls,ws,wss/g}" /etc/asterisk/pjsip.conf
-    sudo sed -i "0,/^;bind=0.0.0.0.*/{s/^;bind=0.0.0.0.*/bind=0.0.0.0/g}" /etc/asterisk/pjsip.conf
+    [[ ! -f /etc/asterisk/pjsip.conf.orig ]] && cp /etc/asterisk/pjsip.conf /etc/asterisk/pjsip.conf.orig
+    sed -i "s/^;\[transport-udp\]/[transport-udp]/g" /etc/asterisk/pjsip.conf
+    # uncomment lines after [transport-udp]
+    sed -i -e '/\[transport-udp\]/,/^$/{//!s/^;//' -e '}' /etc/asterisk/pjsip.conf
 
-    [[ ! -f /etc/asterisk/sip.conf.old ]] && sudo cp /etc/asterisk/sip.conf /etc/asterisk/sip.conf.old
-    sudo sed -i "0,/^;videosupport=yes.*/{s/^;videosupport=yes.*/videosupport=yes                ; Turn on support for SIP video. You need to turn this/g}" /etc/asterisk/sip.conf
-
-    [[ ! -f /etc/asterisk/extensions.conf.old ]] && sudo cp /etc/asterisk/extensions.conf /etc/asterisk/extensions.conf.old
-    [[ -z $( sudo cat /etc/asterisk/extensions.conf | grep '\[sipgate\]' ) ]] && echo '
+    [[ ! -f /etc/asterisk/extensions.conf.orig ]] && cp /etc/asterisk/extensions.conf /etc/asterisk/extensions.conf.orig
+    [[ $(grep -c '\[sipgate\]' /etc/asterisk/extensions.conf) -eq 0 ]] && echo '
 [sipgate]
 exten => _XXX,1,NoOp()
-same => n,Dial(PJSIP/${EXTEN})' | sudo tee -a /etc/asterisk/extensions.conf >> "$out" 2>&1
+same => n,Dial(PJSIP/${EXTEN})' | tee -a /etc/asterisk/extensions.conf >> "$out" 2>&1
+    set +e
+
+    rm -rf "$TEMPDIR"/asterisk
+    echo "
+Asterisk configured
+
+(Remember, you have to add phones - doorpi and other video capable clients (Menu item below))" > ${TEMPDIR}/result
 }
 
 ConfigPhone () {
@@ -785,18 +772,46 @@ ConfigPhone () {
     read PHONENUM PHONEPW DIALPLAN <<< "${phonevars[*]}"
     read DBNAME DBPW DBUSER <<< "${astvars[*]}"
 
-    set +e
-    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_aors (id, max_contacts) VALUES (${PHONENUM}, 10);" >> "$out" 2>&1
-    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_auths (id, auth_type, password, username) VALUES (${PHONENUM}, 'userpass', ${PHONEPW}, ${PHONENUM});" >> "$out" 2>&1
-    sudo mysql -u${DBUSER} -p${PASSWDDB} -e "INSERT INTO ${MAINDB}.ps_endpoints (id, transport, aors, auth, context, disallow, allow, direct_media) values (${PHONENUM}, 'transport-udp', '${PHONENUM}', '${PHONENUM}', '${DIALPLAN}', 'all', 'ulaw;alaw;gsm;g726;g722;h264;h263;vp8;vp9', 'no');" >> "$out" 2>&1
     set -e
+    mysql -u"$DBUSER" -p"$DBPW" -e "INSERT INTO $DBNAME.ps_aors (id, max_contacts) VALUES ($PHONENUM, 10);" >> "$out" 2>&1
+    mysql -u"$DBUSER" -p"$DBPW" -e "INSERT INTO $DBNAME.ps_auths (id, auth_type, password, username) VALUES ($PHONENUM, 'userpass', $PHONEPW, $PHONENUM);" >> "$out" 2>&1
+    mysql -u"$DBUSER" -p"$DBPW" -e "INSERT INTO $DBNAME.ps_endpoints (id, transport, aors, auth, context, disallow, allow, direct_media) values ($PHONENUM, 'transport-udp', '$PHONENUM', '$PHONENUM', '$DIALPLAN', 'all', 'ulaw;alaw;gsm;g726;g722;h264;h263;vp8;vp9', 'no');" >> "$out" 2>&1
+    set +e
     touch ${TEMPDIR}/result
     echo "
 Phones configured
 
-(If you want to add another client phones, just uses the menu option again" > ${TEMPDIR}/result
+(If you want to add another client phones later, just use the menu option again)" > ${TEMPDIR}/result
 }
 
+ShowPhoneConfig () {
+    vars=$1[@]
+    astvars=("${!vars}")
+    read DBNAME DBPW DBUSER <<< "${astvars[*]}"
+
+    DOORPI_PHONE=$(cat "$BASE_PATH"/.phone | cut -d ";" -f 1)
+    PIDS=( $( mysql -u"$DBUSER" -p"$DBPW" -e "SELECT id from $DBNAME.ps_auths;" | awk 'NR!=1' ) )
+    L1=$( mysql -u"$DBUSER" -p"$DBPW" -e "SELECT id, password from $DBNAME.ps_auths;" | sed 's/\x09/ /g' | sed "s/$DOORPI_PHONE/*$DOORPI_PHONE/" | sed 's/$/& connected/' )
+    PACTIVE=( $( mysql -u"$DBUSER" -p"$DBPW" -e "SELECT endpoint from $DBNAME.ps_contacts;" | awk 'NR!=1' ) )
+    i=2
+    #check if endpoint is connected
+    for pid in "${PIDS[@]}"; do
+        echo "$i"
+        if containsElement "$pid" "${PACTIVE[@]}"; then
+            connected="yes"
+        else
+            connected="no"
+        fi
+        L1=$( sed "${i}s/connected/${connected}/" <<< "$L1")
+        let "i++"
+    done
+    L2=$( mysql -u"$DBUSER" -p"$DBPW" -e "SELECT context, allow from $DBNAME.ps_endpoints;" | sed 's/\x09/ /g' )
+    PCONFIGS=$( paste -d' ' <(echo "$L1") <(echo "$L2") )
+    ROWS=$( expr $(awk 'END{print NR}' <<< "$PCONFIGS" ) + 4 )
+    dialog --title "* = Doorpi Phone ; context = dialplan ; allow = Codecs (audio/video) allowed" --no-collapse --msgbox "$( column -t <<< $PCONFIGS )" "$ROWS" 140
+    touch ${TEMPDIR}/result
+    echo "PASS" > ${TEMPDIR}/result
+}
 AsteriskSupport () {
     AsteriskDeps
     ConfigAsterisk "$1"
@@ -804,52 +819,59 @@ AsteriskSupport () {
 
 VideoSupport () {
     [[ ! -d $BASE_PATH ]] && touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result && return
-    SwapCheck
     VideoDeps
+    SwapCheck
     BuildH264
     BuildPJSIP
+    # if asterisk is installed change sip.conf
+    if [ -f /etc/asterisk/sip.conf ]; then
+        [[ ! -f /etc/asterisk/sip.conf.old ]] && cp /etc/asterisk/sip.conf /etc/asterisk/sip.conf.old
+        sed -i "0,/^;videosupport=yes.*/{s/^;videosupport=yes.*/videosupport=yes                ; Turn on support for SIP video. You need to turn this/g}" /etc/asterisk/sip.conf
+    fi
     touch ${TEMPDIR}/result
-    echo "Video Support built
-(Remember, you have to add phones - doorpi and other video capable clients (Menu item below))" > ${TEMPDIR}/result
+    echo "Video Support built" > ${TEMPDIR}/result
 }
 
 BuildVideoserver () {
     vars=$1[@]
     specs=("${!vars}")
     read VID_WIDTH VID_HEIGHT VID_FRAMES VID_SER_PORT VID_DEV <<< "${specs[*]}"
+
+    set -e
     [[ ! -d $BASE_PATH ]] && touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result && return
 
     if [[ ! -f /lib/systemd/system/v4l2rtspserver.service ]]; then
         VideoserverDeps
         echo "... building Videoserver"
         cd ${TEMPDIR}
-        git clone ${RTSP_PACKAGE} >> "$out" 2>&1
+        git clone --progress ${RTSP_PACKAGE} >> "$out" 2>&1
         cd v4l2rtspserver/
         cmake . >> "$out" 2>&1
         make >> "$out" 2>&1
-        sudo make install >> "$out" 2>&1
+        make install >> "$out" 2>&1
         echo "... done"
 
         #systemd service has to be patched (videoserver has to be run before doorpi)
-        line="$( cat ${DATA_DESTINATION["doorpi.service.in"]} | grep After ) v4l2rtspserver.service"
-        sudo sed -i "s/^After=.*/$line/" ${DATA_DESTINATION["doorpi.service.in"]}
+        line="$( grep After ${DATA_DESTINATION["doorpi.service.in"]} ) v4l2rtspserver.service"
+        sed -i "s/^After=.*/$line/" ${DATA_DESTINATION["doorpi.service.in"]}
 
         touch ${TEMPDIR}/result
-        echo " RTSP videoserver built" > ${TEMPDIR}/result
+        echo " RTSP videoserver built.
 
+Grab some client (eg VLAN) and test the stream under rtsp://$(hostname -I | awk '{print $1}'):$VID_SER_PORT/unicast )" > ${TEMPDIR}/result
         cd ${TEMPDIR}
         rm -rf v4l2rtspserver
     else
-        sudo systemctl is-active --quiet v4l2rtspserver && sudo systemctl stop v4l2rtspserver >> "$out" 2>&1
+        systemctl is-active --quiet v4l2rtspserver && systemctl stop v4l2rtspserver >> "$out" 2>&1
         sleep 5
         touch ${TEMPDIR}/result
         echo " Configuration changed" > ${TEMPDIR}/result
     fi
 
-    sudo sed -i "s#^ExecStart=.*#ExecStart=\/usr\/local\/bin\/v4l2rtspserver -W $VID_WIDTH -H $VID_HEIGHT -F $VID_FRAMES -P $VID_SER_PORT $VID_DEV#g" /lib/systemd/system/v4l2rtspserver.service
-    sudo systemctl is-enabled --quiet v4l2rtspserver 2>/dev/null || sudo systemctl enable v4l2rtspserver >> "$out" 2>&1
-    sudo systemctl start v4l2rtspserver >> "$out" 2>&1
-
+    sed -i "s#^ExecStart=.*#ExecStart=\/usr\/local\/bin\/v4l2rtspserver -W $VID_WIDTH -H $VID_HEIGHT -F $VID_FRAMES -P $VID_SER_PORT $VID_DEV#g" /lib/systemd/system/v4l2rtspserver.service
+    systemctl is-enabled --quiet v4l2rtspserver 2>/dev/null || systemctl enable v4l2rtspserver >> "$out" 2>&1
+    systemctl start v4l2rtspserver >> "$out" 2>&1
+    set +e
 }
 
 InstallSamba () {
@@ -857,30 +879,77 @@ InstallSamba () {
     vars=$1[@]
     smbvars=("${!vars}")
     read SMBUSERNAME SMBPW SMBPATH SMBWG SMBUSER SMBGROUP SERVER ACCESSPOINT SMBVALIDU OVERWRITE <<< "${smbvars[*]}"
+    ACCESSPOINT=${ACCESSPOINT//_/ }
+    [[ $ACCESSPOINT = *" "* ]] && ACCESSPOINT=\"$ACCESSPOINT\"
 
+    set -e
     SambaDeps
     if [[ -n $OVERWRITE ]]; then
-        sudo sed '/###Doorpi.*/,/###Marker/{//!d;s/ ,$//}' /etc/samba/smb.conf >> "$out" 2>&1
+        sed '/###Doorpi.*/,/###Marker/{//!d;s/ ,$//}' /etc/samba/smb.conf >> "$out" 2>&1
     fi
 
     # setup for both
-    sudo sed -i "s/^   workgroup =.*/   workgroup = $SMBWG/" /etc/samba/smb.conf >> "$out" 2>&1
+    sed -i "s/^   workgroup =.*/   workgroup = $SMBWG/" /etc/samba/smb.conf >> "$out" 2>&1
 
     if [[ $SERVER == "no" ]]; then
-        if [[ $SMBUSER != "root" ]]; then
-            CREDFILE="/home/$SMBUSER/.smbcredentials"
-        else
-            CREDFILE="/root/.smbcredentials"
+        if [[ -n $OVERWRITE ]]; then
+            LINES=$( awk "/# Doorpi Network Mounts/{a=1;next}/### EndDoorpi/{a=0} a {print}" /etc/fstab )
+            SAME_AP=$( grep "${ACCESSPOINT} " <<< "$LINES" )
+            if [[ -n $SAME_AP ]]; then
+                CREDFILE=$( awk '{print $4}' <<< "$SAME_AP" | cut -d "," -f 1 | cut -d "=" -f 2 )
+                sed -i "\|$SAME_AP|d" /etc/fstab
+                if [[ $( grep "$CREDFILE" <<< "$LINES" | awk 'END{print NR}' ) == 1 ]]; then
+                    rm "$CREDFILE"
+                fi
+            else
+                ITEMS=( $( awk '{print $1,$2,"off"}'  <<< "$LINES" ) )
+                NITEMS=$( awk 'END{print NR}' <<< "$LINES" )
+                RESULT=( $( dialog --checklist "select the line(s) to overwrite" "$( expr "$NITEMS" + 7 )" 160 "$NITEMS" "${ITEMS[@]}" 3>&2 2>&1 1>&3 ) )
+                for AP in "${RESULT[@]}"; do
+                    CREDFILE=$( grep "$AP" <<< "$ITEMS" | awk '{print $4}' | cut -d "," -f 1 | cut -d "=" -f 2 )
+                    sed -i "\|$AP|d" /etc/fstab
+                    LINES=$( awk "/# Doorpi Network Mounts/{a=1;next}/### EndDoorpi/{a=0} a {print}" /etc/fstab )
+                    if [[ $( grep -c "$CREDFILE" <<< "LINES" ) -eq 0 ]]; then
+                        rm "$CREDFILE"
+                    fi
+                done
+            fi
         fi
-        touch $CREDFILE
-        chmod 0640 $CREDFILE
-        echo "username=$SMBUSERNAME
-password=$SMBPW" | tee $CREDFILE >> "$out" 2>&1
-        sudo chown -R "$SMBUSER":"$SMBGROUP" "$CREDFILE" >> "$out" 2>&1
-        sudo mkdir -p "$SMBPATH" >> "$out" 2>&1
-        sudo chown -R "$SMBUSER":"$SMBGROUP" "$SMBPATH" >> "$out" 2>&1
+
+        if [[ $SMBUSER != "root" ]]; then
+            LOC="/home/$SMBUSER"
+        else
+            LOC="/root"
+        fi
+
+        for i in {1..100}; do
+            if [[ -f "$LOC"/.smbcred"$i" ]]; then
+                if [[ $( grep -c "username=$SMBUSERNAME" "$LOC"/.smbcred"$i" ) -eq 1 ]] && [[ $( grep -c "password=$SMBPW" "$LOC"/.smbcred"$i" ) -eq 1 ]]; then
+                    CREDFILE="$LOC"/.smbcred"$i"
+                    break
+                fi
+            else
+                CREDFILE="$LOC"/.smbcred"$i"
+                touch $CREDFILE
+                chmod 0640 $CREDFILE
+                chown "$SMBUSER":"$SMBGROUP" "$CREDFILE"
+                printf 'username=%s\npassword=%s\n' "$SMBUSERNAME" "$SMBPW" > $CREDFILE
+                break
+            fi
+        done
+
         # fstab entry
-        echo "$ACCESSPOINT $SMBPATH cifs credentials=$CREDFILE,vers=3.0,uid=$( id -u $SMBUSER ),gid=$( id -g $SMBGROUP ),noserverino,x-systemd.automount,x-systemd.requires=network-online.target 0 0" | sudo tee -a /etc/fstab >> "$out" 2>&1
+        ENTRY="$ACCESSPOINT $SMBPATH cifs credentials=$CREDFILE,vers=3.0,uid=$( id -u $SMBUSER ),gid=$( id -g $SMBGROUP ),noserverino,x-systemd.automount,x-systemd.requires=network-online.target 0 0"
+        if [[ $(grep -c "# Doorpi Network Mounts" /etc/fstab) -eq 0 ]]; then
+            printf '\n# Doorpi Network Mounts\n%s\n###EndDoori' "$ENTRY" >> /etc/fstab
+        else
+            #this is set up as auto(re)mount, just to be sure that no path gets created while mounted
+            umount -a -t cifs -l
+            sed -i "/# Doorpi Network Mounts.*/a $ENTRY" /etc/fstab
+        fi
+        mkdir -p "$SMBPATH" >> "$out" 2>&1
+        chown "$SMBUSER":"$SMBGROUP" "$SMBPATH" >> "$out" 2>&1
+
         touch ${TEMPDIR}/result
         echo "
  Samba Client configured.
@@ -890,11 +959,11 @@ password=$SMBPW" | tee $CREDFILE >> "$out" 2>&1
         # create new user (that can't log in and has no home dir)
         id -u test >/dev/null 2>&1 && SMB_USER_EXIST=1
         if [[ -z $SMB_USER_EXIST ]]; then
-            sudo adduser --no-create-home --disabled-login --gecos "" --shell /bin/false "$SMBUSERNAME" >> "$out" 2>&1
+            adduser --no-create-home --disabled-login --gecos "" --shell /bin/false "$SMBUSERNAME" >> "$out" 2>&1
             echo "Samba user '$SMBUSERNAME' added"
-            sudo gpasswd -a "$SMBUSERNAME" sambashare >> "$out" 2>&1
+            gpasswd -a "$SMBUSERNAME" sambashare >> "$out" 2>&1
             # also add doorpi user
-            sudo gpasswd -a "$SMBUSER" sambashare >> "$out" 2>&1
+            gpasswd -a "$SMBUSER" sambashare >> "$out" 2>&1
             echo "User '$SMBUSERNAME'/'$SMBUSER' added to 'sambashare' group"
             (echo "$SMBPW"; echo "$SMBPW") | smbpasswd -a "$SMBUSERNAME" -s
             echo "Password created for '$SMBUSERNAME'"
@@ -913,15 +982,16 @@ password=$SMBPW" | tee $CREDFILE >> "$out" 2>&1
    guest ok = no\n"
         sed -i "/^###Doorpi.*/a $ENTRY" /etc/samba/smb.conf >> "$out" 2>&1
         [[ -n $OVERWRITE ]] && echo "Config overwritten" || echo "Config saved"
-        sudo mkdir -p "$SMBPATH" >> "$out" 2>&1
-        sudo chown -R "$SMBUSER":sambashare "$SMBPATH" >> "$out" 2>&1
-        sudo chmod -R ug+rwX,o-rwx "$SMBPATH" >> "$out" 2>&1
+        mkdir -p "$SMBPATH" >> "$out" 2>&1
+        chown -R "$SMBUSER":sambashare "$SMBPATH" >> "$out" 2>&1
+        chmod -R ug+rwX,o-rwx "$SMBPATH" >> "$out" 2>&1
         touch ${TEMPDIR}/result
         echo "
  Samba Server configured" > ${TEMPDIR}/result
     fi
-    sudo service smbd restart
-    sudo service nmbd restart
+    service smbd restart
+    service nmbd restart
+    set +e
 }
 
 DoorpiDebugRun (){
@@ -929,7 +999,7 @@ DoorpiDebugRun (){
     DEBUG_FILE="/tmp/doorpi_$( date +%Y-%m-%d_%H%M ).debug"
     DBG_ADD=" --debug doorpi --logfile ${DEBUG_FILE}"
     sed -i "s|^ExecStart=.*|&$DBG_ADD|" ${DATA_DESTINATION["doorpi.service.in"]}
-    sudo systemctl daemon-reload
+    systemctl daemon-reload
     StartDaemon bckgrnd
     while [[ ! -f $DEBUG_FILE ]]; do
          sleep 0.5
@@ -937,7 +1007,7 @@ DoorpiDebugRun (){
     dialog --tailbox "$DEBUG_FILE" $( expr "$MAXY" - 40) $( expr "$MAXX" - 80)
     StopDaemon
     sed -i "s|$DBG_ADD||" ${DATA_DESTINATION["doorpi.service.in"]}
-    sudo systemctl daemon-reload
+    systemctl daemon-reload
     touch ${TEMPDIR}/result
     echo "Debug file is found at $DEBUG_FILE" > ${TEMPDIR}/result
 }
@@ -989,11 +1059,13 @@ StartService() {
     StartDaemon bckgrnd
     # there is no widget to perform this without using a trap
     trap "return" SIGINT
-    sudo journalctl -u doorpi.service -f | dialog --progressbox "Journal output (doorpi.service) --- CTRL-C to exit" $(expr $MAXY - 40) $(expr $MAXX - 80)
+    journalctl -u doorpi.service -f | dialog --progressbox "Journal output (doorpi.service) --- CTRL-C to exit" $(expr $MAXY - 40) $(expr $MAXX - 80)
     trap - SIGINT
 }
 
 ## MAIN ROUTINE
+
+SysInstaller updatelist
 
 if  [[ ! -f $SRC_PATH/.env ]] ; then
     preinstall
@@ -1004,49 +1076,61 @@ fi
 
 while [ 1 ]
 do
+
+    RESOLUTION=( $(dialog --print-maxsize 3>&2 2>&1 1>&3 | awk '{print $2 $3}' | sed 's/,/ /') )
+    read MAXY MAXX <<< "${RESOLUTION[*]}"
+    echo "Resolution: X($MAXX) Y($MAXY)" >> "$out" 2>&1
+
     BOXX=100
-    FORMITEMS=14
-    BOXY=$( expr $FORMITEMS + 8 )
-    FORMX=$( expr $( expr $BOXX - 7 ) / 2)
-    INFOBOXY=29
+    FORMITEMS=15
+    BOXY=$( expr "$FORMITEMS" + 8 )
+    FORMX=$( expr $( expr "$BOXX" - 7 ) / 2 )
+    INFOBOXY=30
     INFOBOXX=140
+    BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
     [[ -z $BASE_PATH ]] && DOORPI_INST="Doorpi Installation        Installs Core Doorpi" || DOORPI_INST="Doorpi Update              Fetches the new updates"
+
     CHOICE=$(
         dialog --backtitle "Doorpi Setup $version" \
-        --begin $(expr $(expr $MAXY / 2) - $(expr $BOXY / 2) - $INFOBOXY - 3 ) $(expr $(expr $MAXX / 2) - $(expr $INFOBOXX / 2) - 1) --infobox "$MAIN_DESC" "$INFOBOXY" "$INFOBOXX" \
-        --and-widget --menu "\nMain installer" $BOXY $BOXX $FORMITEMS \
+        --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$INFOBOXX" / 2) - 1) --infobox "$MAIN_DESC" "$INFOBOXY" "$INFOBOXX" \
+        --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --menu "\nMain installer" "$BOXY" "$BOXX" "$FORMITEMS" \
         "10" "| $DOORPI_INST" \
         "20" "| Asterisk Server            Adds Asterisk Server for SIP routing" \
         "30" "| Phone Config               Configure Doorpi/Client SIP Connections" \
-        "40" "| Sound Card Selector"
+        "40" "| Sound Card Selector" \
+        "50" "| List Configured Phones" \
         ""   "" \
-        "50" "| Video Support              Adds Video Support (PJSIP)" \
-        "60" "| RTSP Videoserver           Adds a RTSP Stream Server readable to PJSIP" \
-        "70" "| Samba Client               Adds Samba client" \
+        "60" "| Video Support              Adds Video Support (PJSIP)" \
+        "70" "| RTSP Videoserver           Adds a RTSP Stream Server readable to PJSIP" \
+        "80" "| Samba Client               Adds Samba client" \
         ""   "" \
-        "80" "| Enable/Start Doorpi systemd service" \
-        "90" "| Stop Doorpi systemd service" \
-        "100" "| Doorpi debug run" \
-        "110" "| Backup Doorpi config" \
-        "120" "| Restore Doorpi Config" 3>&2 2>&1 1>&3
+        "90" "| Enable/Start Doorpi systemd service" \
+        "100" "| Stop Doorpi systemd service" \
+        "110" "| Doorpi debug run" \
+        "120" "| Backup Doorpi config" \
+        "130" "| Restore Doorpi Config" 3>&2 2>&1 1>&3
     )
 
-    result="Exited with errors. Start setup.sh with -v or -l </path/to/file> to locate the error"
+    if [[ $MAXX -lt 140 ]] || [[ $BORDER -lt 0  ]]; then
+        result="Maximize your window. 'Dialog' is not able to show content"
+    else
+        result="Exited with errors. Start 'doorpi-setup' with -v or -l </path/to/file> to locate the error"
+    fi
     case $CHOICE in
 
             "")
                 #move source over to WORKING_DIR
-                if  [[ -z $BASE_PATH ]] && [[ -f $SRC_PATH/.env ]] ; then
+                if [[ -s $SRC_PATH/.env ]] && [[ $SRC_PATH != $BASE_PATH/src  ]]; then
                     BASE_PATH=$( cat "$SRC_PATH"/.env )
                     cp -r "$SRC_PATH"/.  "$BASE_PATH"/src/
-                    ln -s "$BASE_PATH"/src/setup.sh /usr/local/bin/setup.sh
+                    ln -s "$BASE_PATH"/src/doorpi-setup /usr/local/bin/doorpi-setup
                     #BASHRC="/root/.bashrc"
 #                    if [[ -n $SUDO_USER ]]; then
 #                        BASHRC="/home/$SUDO_USER/.bashrc"
 #                    else
 #                        BASHRC="/root/.bashrc"
 #                    fi
-                    dialog --msgbox "\nSource moved to $BASE_PATH/src\n\nYou can now remove the git folder\n\nNext time you want to use the installer simply type 'sudo doorpi-setup'" 16 78
+                    dialog --msgbox "\nSource moved to $BASE_PATH/src\n\nYou can now remove the git folder\n\nNext time you want to use the installer simply type 'sudo doorpi-setup' from anywhere" 16 78
                 fi
                 clear
                 exit
@@ -1060,37 +1144,42 @@ do
 #                )
                 if [[ -z $BASE_PATH ]]; then
                     prepare_install "$PREFIX"
-                    INST_MODE="installed"
+                    INST_MODE="install"
                 else
-                    sudo systemctl is-active --quiet doorpi && sudo systemctl stop doorpi >> "$out" 2>&1
-                    cd ${BASE_PATH}
+                    systemctl is-active --quiet doorpi && systemctl stop doorpi >> "$out" 2>&1
+                    cd "$SRC_PATH"
                     git fetch >> "$out" 2>&1
                     git pull >> "$out" 2>&1
                     python3 -m pip uninstall doorpi >> "$out" 2>&1
-                    INST_MODE="updated"
+                    INST_MODE="update"
                 fi
-                python3 -m pip install . --prefix $PREFIX --ignore-installed PyYAML | dialog --progressbox $(expr $MAXY - 40) $(expr $MAXX - 80)
+                python3 -m pip install --prefix $PREFIX --progress-bar off --ignore-installed PyYAML . 2>> "$out" | dialog --progressbox $(expr "$MAXY" - 40) $(expr "$MAXX" - 80)
+                if [[ $INST_MODE == "update" ]]; then
+                    dialog --msgbox "Doorpi successfully updated and has to exit now.\n\nTo restart the service just hit the 'Enable/Start Doorpi systemd service' menu point again"
+                    exit
+                fi
                 touch ${TEMPDIR}/result
-                echo "Doorpi succesfully $INST_MODE" > ${TEMPDIR}/result
-                [[ $INST_MODE == "updated" ]] && echo "To restart the service just hit the 'Enable/Start Doorpi systemd service' menu point" >> ${TEMPDIR}/result
+                echo "Doorpi successfully installed" > ${TEMPDIR}/result
 	            ;;
 
 	          "20")
 	              BOXX=80
                 FORMITEMS=4
-                BOXY=$( expr $FORMITEMS + 8 )
-                FORMX=$( expr $( expr $BOXX - 7 ) / 2)
+                BOXY=$( expr "$FORMITEMS" + 8 )
+                FORMX=$( expr $( expr "$BOXX" - 7 ) / 2)
 	              INFOBOXY=14
-	              INFOBOXY=140
+	              INFOBOXX=140
+	              BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
+
 	              ASTVARS=( $( dialog --backtitle "Doorpi Setup $version" --title "Video Support" \
-	              --begin $(expr $(expr $MAXY / 2) - $(expr $BOXY / 2) - $INFOBOXY - 3 ) $(expr $(expr $MAXX / 2) - $(expr $INFOBOXX / 2) - 1) --infobox "$DB_DESC" "$INFOBOXY" "$INFOBOXX" \
-	              --and-widget  --form "\nSetup Variables" $BOXY $BOXX $FORMITEMS \
-	              " [DB] Root password:" 1 1 "" 1 $FORMX $FORMX $FORMX \
-	              " [DB] Database name:" 2 1 "asterisk" 2 $FORMX $FORMX $FORMX \
-	              " [DB] Database password:" 3 1 "" 3 $FORMX $FORMX $FORMX \
-	              " [DB] User name:" 4 1 "asterisk" 4 $FORMX $FORMX $FORMX 3>&2 2>&1 1>&3 ) )
+	              --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$INFOBOXX" / 2) - 1) --infobox "$DB_DESC" "$INFOBOXY" "$INFOBOXX" \
+	              --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --form "\nSetup Variables" "$BOXY" "$BOXX" "$FORMITEMS" \
+	              " [DB] Root password:" 1 1 "" 1 "$FORMX" "$FORMX" "$FORMX" \
+	              " [DB] Database name:" 2 1 "asterisk" 2 "$FORMX" "$FORMX" "$FORMX" \
+	              " [DB] Database password:" 3 1 "" 3 "$FORMX" "$FORMX" "$FORMX" \
+	              " [DB] User name:" 4 1 "asterisk" 4 "$FORMX" "$FORMX" "$FORMX" 3>&2 2>&1 1>&3 ) )
 	              if [[ -n ${ASTVARS[0]} ]]; then
-                    AsteriskSupport ASTVARS | dialog --progressbox $(expr $MAXY - 40) $(expr $MAXX - 80)
+                    AsteriskSupport ASTVARS | dialog --progressbox $(expr "$MAXY" - 40) $(expr "$MAXX" - 80)
                 else
                     touch ${TEMPDIR}/result
                     echo "User Exit" > ${TEMPDIR}/result
@@ -1100,17 +1189,21 @@ do
             "30")
                 BOXX=80
                 FORMITEMS=3
-                BOXY=$( expr $FORMITEMS + 8 )
-                FORMX=$( expr $( expr $BOXX - 7 ) / 2)
+                BOXY=$( expr "$FORMITEMS" + 8 )
+                FORMX=$( expr $( expr "$BOXX" - 7 ) / 2)
+                INFOBOXY=14
+	              INFOBOXX=140
+	              BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
+
                 if [[ -z $ASTVARS ]]; then
                     INFOBOXY=5
                     DB_DESC="\nPlease enter the credentials again, as i need to access the database\n\n[UP/DOWN] Move though items [TAB] Move through menu options\n[Enter] Accept ALL changes [ESC] Closes dialog"
                     ASTVARS=( $( dialog --backtitle "Doorpi Setup $version" --title "Asterisk database" \
-                    --begin $(expr $(expr $MAXY / 2) - $(expr $BOXY / 2) - $INFOBOXY - 3 ) $(expr $(expr $MAXX / 2) - $(expr $BOXX / 2) - 1) --infobox "$DB_DESC" "$INFOBOXY" "$BOXX" \
-                    --and-widget --form "\nDB variables" $BOXY $BOXX $FORMITEMS \
-                    " Database name:" 1 1 "asterisk" 1 $FORMX $FORMX $FORMX \
-                    " Database password:" 2 1 "" 2 $FORMX $FORMX $FORMX \
-                    " Database user name:" 3 1 "asterisk" 3 $FORMX $FORMX $FORMX 3>&2 2>&1 1>&3 ) )
+                    --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --infobox "$DB_DESC" "$INFOBOXY" "$BOXX" \
+                    --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --form "\nDB variables" "$BOXY" "$BOXX" "$FORMITEMS" \
+                    " Database name:" 1 1 "asterisk" 1 "$FORMX" "$FORMX" "$FORMX" \
+                    " Database password:" 2 1 "" 2 "$FORMX" "$FORMX" "$FORMX" \
+                    " Database user name:" 3 1 "asterisk" 3 "$FORMX" "$FORMX" "$FORMX" 3>&2 2>&1 1>&3 ) )
                 else
                     unset ASTVARS[0]
                 fi
@@ -1120,23 +1213,21 @@ do
 
                 while [[ $ADD == 0 ]]; do
                     if [[ ! -f ${BASE_PATH}/.phone ]]; then
-                        INFOBOXY=24
+                        INFOBOXY=22
                         INFOBOXX=140
                         PHONE="Doorpi Phone"
                         PHONE_DESC="\nConfiguration for the main DOORPI SIP connection\n\nPhone number - the number under which Doorpi should be reached.\nPassword     - (shown) a random generated 16 digit number. You can either run with this one or enter one anew (digits only)\nDialplan     -\
  a config signifier the calling numbers (which have the same signifier) are routed through. If you want to change that\n               name, you would have to change it in /etc/asterisk/extensions.conf accordingly. You may want to come up with a more\n               sophisticated dialplan, the one offered can \
 be considerred a base minimum\n\nYou don't need any adjustments if you enter a 3 digit numbers as those are routed through by default\nFurther restriction ex.: 3 Phones, 700(doorpi) 701(softphone) 702(hardphone) extensions.conf should route 'exten => _70X,1,NoOp()'\n\nThose values (phone number/password) \
-are supposed to be entered in the webconfig (sipphone section) as server.username resp. server.password        or using the commandline at ${BASE_PATH}/conf/doorpi.ini with\n[sipphone]\nserver.username = x\nserver.password = x\n\nforgot any pw? type ' sudo mysql -u${DBUSER} -p${DBPW} \
--e 'select * from ${DBNAME}.ps_auths' '\n\n[UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept ALL changes [ESC] Closes dialog"
+are supposed to be entered in the webconfig (sipphone section) as server.username resp. server.password        or using the commandline at ${BASE_PATH}/conf/doorpi.ini with\n[sipphone]\nserver.username = x\nserver.password = x\n\n[UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept ALL changes [ESC] Closes dialog"
                     else
-                        INFOBOXY=24
+                        INFOBOXY=22
                         INFOBOXX=140
                         PHONE="Client Phone"
                         PHONE_DESC="\nConfiguration for the SIP client connection(s)\n\nPhone number - the number under which the client could be reached.\nPassword     - (shown) a random generated 16 digit number. You can either run with this one or enter one anew (digits only)\nDialplan     -\
  a config signifier the calling numbers (which have the same signifier) are routed through. If you want to change that\n               name, you would have to change it in /etc/asterisk/extensions.conf accordingly. You may want to come up with a more\n               sophisticated dialplan, the one offered can \
 be considerred a base minimum\n\nYou don't need any adjustments if you enter a 3 digit number as those are routed through by default\n\nThis was predominantly tested with Linphone softphones (Android/Windows/..). (and Routing systems like FritzBox)\nThose are easy to set up with\n\
-Adress: '<num>' <sip:<num>@<doorpiip>>\nServeradress: <sip:<doorpiip>;transport=udp>\n\nBut i would guess this also applies to other clients\n\nforgot any pw? type ' sudo mysql -u${DBUSER} -p${DBPW} -e 'select * from ${DBNAME}.ps_auths' '\n\n[UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept>
-ALL changes [ESC] Closes dialog"
+Adress: '<num>' <sip:<num>@<doorpiip>>\nServeradress: <sip:<doorpiip>;transport=udp>\n\nBut i would guess this also applies to other clients\n\n[UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept ALL changes [ESC] Closes dialog"
                     fi
                     PHONEPW="$({
                         for i in $( seq 1 16 )
@@ -1144,15 +1235,18 @@ ALL changes [ESC] Closes dialog"
                               choose '0123456789'
                            done
                         } | sort -R | awk '{printf "%s",$1}')"
+                    BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
+
                     PHONEVARS=( $( dialog --backtitle "Doorpi Setup $version" --title "Asterisk Phone setup" \
-                    --begin $(expr $(expr $MAXY / 2) - $(expr $BOXY / 2) - $INFOBOXY - 3 ) $(expr $(expr $MAXX / 2) - $(expr $INFOBOXX / 2) - 1) --infobox "$PHONE_DESC" "$INFOBOXY" "$INFOBOXX" \
-                    --and-widget --form "\n$PHONE" $BOXY $BOXX $FORMITEMS \
-                    " Phone number:" 1 1 "" 1 $FORMX $FORMX $FORMX \
-                    " Phone password:" 2 1 "$PHONEPW" 2 $FORMX $FORMX $FORMX \
-                    " dialplan:" 3 1 "sipgate" 3 $FORMX $FORMX $FORMX 3>&2 2>&1 1>&3 ) )
+                    --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$INFOBOXX" / 2) - 1) --infobox "$PHONE_DESC" "$INFOBOXY" "$INFOBOXX" \
+                    --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --form "\n$PHONE" "$BOXY" "$BOXX" "$FORMITEMS" \
+                    " Phone number:" 1 1 "" 1 "$FORMX" "$FORMX" "$FORMX" \
+                    " Phone password:" 2 1 "$PHONEPW" 2 "$FORMX" "$FORMX" "$FORMX" \
+                    " dialplan:" 3 1 "sipgate" 3 "$FORMX" "$FORMX" "$FORMX" 3>&2 2>&1 1>&3 ) )
                     if [[ -n ${PHONEVARS[0]} ]]; then
+                        read PNUMBER PW DIALPLAN <<< "${PHONEVARS[*]}"
                         ConfigPhone PHONEVARS ASTVARS
-                        echo "Do not delete unless you want to configure a different doorpi phone" | tee ${BASE_PATH}/.phone
+                        [[ $PHONE == "Doorpi Phone" ]] && echo "$PNUMBER;Do not delete unless you want a new doorpi number" > "$BASE_PATH"/.phone
                         PHONE="Client Phone"
                     else
                         touch ${TEMPDIR}/result
@@ -1161,36 +1255,82 @@ ALL changes [ESC] Closes dialog"
 
                     dialog --backtitle "Doorpi Setup" --title "Asterisk Phone Setup" \
                            --yesno "\nDo you want to add another $PHONE" 7 60
-                    ADD=$?
+                    ADD="$?"
                 done
                 ;;
 
             "40")
+                CURDEFAULT=$( grep "defaults.pcm.card" /etc/asound.conf 2> /dev/null | awk '{print $2}' )
                 SCARDS=$( cat /proc/asound/cards | awk '{$1=$1}1' | sed -n 'p;n' | sed 's/\[.*\]: //' | sed 's/ /_/g2' )
-                CARDNR=$( dialog --menu 'Please choose a Sound card' 15 55 5 $SCARDS 3>&2 2>&1 1>&3 )
-                echo "defaults.pcm.card $CARDNR
-defaults.ctl.card $CARDNR" | sudo tee /etc/asound.conf
+                CARDNR=$( dialog --menu "Please choose a Sound card. (Curr. default: $CURDEFAULT)" 15 55 5 ${SCARDS} 3>&2 2>&1 1>&3 )
+                touch ${TEMPDIR}/result
+                if [[ -n $CARDNR ]]; then
+                    echo "defaults.pcm.card $CARDNR
+defaults.ctl.card $CARDNR" | tee /etc/asound.conf >> "$out" 2>&1
+                    printf 'Sound card %s is set as default' "$CARDNR" > ${TEMPDIR}/result
+                elif [[ -n $CURDEFAULT ]]; then
+                    echo "Sound card $CURDEFAULT remains default" > ${TEMPDIR}/result
+                else
+                    echo "No sound card set" > ${TEMPDIR}/result
+                fi
                 ;;
 
             "50")
-                VideoSupport | dialog --progressbox $(expr $MAXY - 40) $(expr $MAXX - 80)
+                BOXX=80
+                FORMITEMS=3
+                BOXY=$( expr "$FORMITEMS" + 8 )
+                FORMX=$( expr $( expr "$BOXX" - 7 ) / 2)
+                INFOBOXY=14
+	              INFOBOXX=140
+	              BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
+
+	              if [[ ! -f $SRC_PATH/.env ]]; then
+	                  touch ${TEMPDIR}/result
+	                  printf "/n No Phones configured yet" > ${TEMPDIR}/result
+	              else
+                    if [[ -z $ASTVARS ]]; then
+                        INFOBOXY=5
+                        DB_DESC="\nPlease enter the credentials again, as i need to access the database\n\n[UP/DOWN] Move though items [TAB] Move through menu options\n[Enter] Accept ALL changes [ESC] Closes dialog"
+                        ASTVARS=( $( dialog --backtitle "Doorpi Setup $version" --title "Asterisk database" \
+                        --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --infobox "$DB_DESC" "$INFOBOXY" "$BOXX" \
+                        --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --form "\nDB variables" "$BOXY" "$BOXX" "$FORMITEMS" \
+                        " Database name:" 1 1 "asterisk" 1 "$FORMX" "$FORMX" "$FORMX" \
+                        " Database password:" 2 1 "" 2 "$FORMX" "$FORMX" "$FORMX" \
+                        " Database user name:" 3 1 "asterisk" 3 "$FORMX" "$FORMX" "$FORMX" 3>&2 2>&1 1>&3 ) )
+                    elif [[ ${#ASTVARS[@]} == 4 ]]; then
+                        unset ASTVARS[0]
+                    fi
+                    ShowPhoneConfig ASTVARS
+                fi
                 ;;
 
             "60")
+                if [[ ! -d $BASE_PATH ]]; then
+                    touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result
+                else
+                    VideoSupport | dialog --progressbox $(expr "$MAXY" - 40) $(expr "$MAXX" - 80)
+                fi
+                ;;
+
+            "70")
                 INFOBOXY=21
                 INFOBOXX=140
                 BOXX=80
                 FORMITEMS=5
-                BOXY=$( expr $FORMITEMS + 8 )
-                FORMX=$( expr $( expr $BOXX - 7 ) / 2)
+                BOXY=$( expr "$FORMITEMS" + 8 )
+                FORMX=$( expr $( expr "$BOXX" - 7 ) / 2)
+                BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
+                BUILTIN_DEV=$( v4l2-ctl --list-devices 2>/dev/null | awk "/mmal service/{ getline; print }" | tr -d '[:space:]' )
+                [[ -z $BUILTIN_DEV ]] && BUILTIN_DEV="/dev/video1"
+
                 VIDEOSPECS=( $( dialog --backtitle "Doorpi Setup $version" --title "RTSP Videoserver setup" \
-                --begin $(expr $(expr $MAXY / 2) - $(expr $BOXY / 2) - $INFOBOXY - 3 ) $(expr $(expr $MAXX / 2) - $(expr $INFOBOXX / 2) - 1) --infobox "$RTSP_DESC" "$INFOBOXY" "$INFOBOXX" \
-                --and-widget --form "\nVideoserver Specs" $BOXY $BOXX $FORMITEMS \
-                " Video Width:" 1 1 "720" 1 $FORMX $FORMX $FORMX \
-                " Video Height:" 2 1 "480" 2 $FORMX $FORMX $FORMX \
-                " Video Frames:" 3 1 "15" 3 $FORMX $FORMX $FORMX \
-                " Video Server Port:" 4 1 "7447" 4 $FORMX $FORMX $FORMX \
-                " Video Device:" 5 1 "/dev/video1" 5 $FORMX $FORMX $FORMX 3>&2 2>&1 1>&3 ) )
+                --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$INFOBOXX" / 2) - 1) --infobox "$RTSP_DESC" "$INFOBOXY" "$INFOBOXX" \
+                --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --form "\nVideoserver Specs" "$BOXY" "$BOXX" "$FORMITEMS" \
+                " Video Width:" 1 1 "720" 1 "$FORMX" "$FORMX" "$FORMX" \
+                " Video Height:" 2 1 "480" 2 "$FORMX" "$FORMX" "$FORMX" \
+                " Video Frames:" 3 1 "15" 3 "$FORMX" "$FORMX" "$FORMX" \
+                " Video Server Port:" 4 1 "7447" 4 "$FORMX" "$FORMX" "$FORMX" \
+                " Video Device:" 5 1 "$BUILTIN_DEV" 5 "$FORMX" "$FORMX" "$FORMX" 3>&2 2>&1 1>&3 ) )
                 if [[ -n ${VIDEOSPECS[0]} ]]; then
                     BuildVideoserver VIDEOSPECS | dialog --progressbox $(expr $MAXY - 40) $(expr $MAXX - 80)
                 else
@@ -1199,7 +1339,7 @@ defaults.ctl.card $CARDNR" | sudo tee /etc/asound.conf
                 fi
 	              ;;
 
-            "70")
+            "80")
                 if [[ -d $BASE_PATH ]]; then
                     dialog --backtitle "Doorpi Setup $version" --title "Samba setup" \
                     --no-label "Client" --yes-label "Server" --yesno "\nConfigure Samba as Server or Client?" 7 60
@@ -1211,57 +1351,67 @@ defaults.ctl.card $CARDNR" | sudo tee /etc/asound.conf
                     INFOBOXX=140
                     BOXX=80
                     FORMITEMS=9
-                    BOXY=$( expr $FORMITEMS + 8 )
-                    FORMX=$( expr $( expr $BOXX - 7 ) / 2)
+                    BOXY=$( expr "$FORMITEMS" + 8 )
+                    FORMX=$( expr $( expr "$BOXX" - 7 ) / 2)
+                    BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
+
+                    WRKGRP=$( grep "workgroup =" /etc/samba/smb.conf 2>/dev/null | tr -d '[:space:]' | cut -d "=" -f 2 )
+                    [[ -z $WRKGRP ]] && WRKGRP="WORKGROUP"
+
                     SAMBASPECS=( $( dialog --backtitle "Doorpi Setup $version" --title "Samba setup" \
-                    --begin $(expr $(expr $MAXY / 2) - $(expr $BOXY / 2) - $INFOBOXY - 3 ) $(expr $(expr $MAXX / 2) - $(expr $INFOBOXX / 2) - 1) --infobox "$SMB_DESC" "$INFOBOXY" "$INFOBOXX" \
-                    --and-widget --form "\nSamba Config" $BOXY $BOXX $FORMITEMS \
-                    " Samba username:" 1 1 "" 1 $FORMX $FORMX $FORMX \
-                    " Samba password:" 2 1 "" 2 $FORMX $FORMX $FORMX \
-                    " Samba path:" 3 1 "$SMB_PATH" 3 $FORMX $FORMX $FORMX \
-                    " Samba workgroup:" 4 1 "WORKGROUP" 4 $FORMX $FORMX $FORMX \
-                    " UNIX user:" 5 1 "$USER" 5 $FORMX $FORMX $FORMX \
-                    " UNIX group:" 6 1 "$GROUP" 6 $FORMX $FORMX $FORMX \
-                    " As server (no/yes):" 7 1 "$AS_SERVER" 7 $FORMX $FORMX $FORMX \
-                    " [CLIENT] Server access point:" 8 1 "$SAP" 8 $FORMX $FORMX $FORMX \
-                    " [SERVER] Valid users:" 9 1 "$VALU" 9 $FORMX $FORMX $FORMX 3>&2 2>&1 1>&3 ) )
-                    if [[ -n ${SAMBASPECS[0]} ]]; then
-                        if [[ ${SAMBASPECS[6]} != "no" ]] && [[ -f /etc/samba/smb.conf ]] && [[ -n $( cat /etc/samba/smb.conf | grep '###Doorpi') ]]; then
+                    --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$INFOBOXX" / 2) - 1) --infobox "$SMB_DESC" "$INFOBOXY" "$INFOBOXX" \
+                    --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1)  --form "\nSamba Config" "$BOXY" "$BOXX" "$FORMITEMS" \
+                    " Samba username:" 1 1 "" 1 "$FORMX" "$FORMX" "$FORMX" \
+                    " Samba password:" 2 1 "" 2 "$FORMX" "$FORMX" "$FORMX" \
+                    " Samba path:" 3 1 "$SMB_PATH" 3 "$FORMX" "$FORMX" 80 \
+                    " Samba workgroup:" 4 1 "$WRKGRP" 4 "$FORMX" "$FORMX" "$FORMX" \
+                    " UNIX user:" 5 1 "$USER" 5 "$FORMX" "$FORMX" "$FORMX" \
+                    " UNIX group:" 6 1 "$GROUP" 6 "$FORMX" "$FORMX" "$FORMX" \
+                    " As server (no/yes):" 7 1 "$AS_SERVER" 7 "$FORMX" "$FORMX" "$FORMX" \
+                    " [CLIENT] Server access point:" 8 1 "$SAP" 8 "$FORMX" "$FORMX" 80 \
+                    " [SERVER] Valid users:" 9 1 "$VALU" 9 "$FORMX" "$FORMX" "$FORMX" 3>&2 2>&1 1>&3 ) )
+                    if [[ ${#SAMBASPECS[@]} == 9 ]]; then
+                        WRKGRP=${SAMBASPECS[3]}
+                        if [[ ${SAMBASPECS[6]} != "no" ]] && [[ $( grep -c '###Doorpi' /etc/samba/smb.conf ) -eq 1 ]]; then
                             dialog --backtitle "Doorpi Setup" --title "Samba Setup" \
                             --yesno "\nShould the old server config been deleted?" 7 60
+                            [[ $? == "0" ]] && SAMBASPECS+=( "overwrite" )
+                        elif [[ ${SAMBASPECS[6]} == "no" ]] && [[ $(grep -c "# Doorpi Network Mounts" /etc/fstab) -eq 1 ]]; then
+                            dialog --backtitle "Doorpi Setup" --title "Samba Setup" \
+                            --yes-label "Overwrite" --no-label "New" --yesno "\nIs this a new share or should i overwrite an existing?" 7 60
                             [[ $? == "0" ]] && SAMBASPECS+=( "overwrite" )
                         elif [[ ${SAMBASPECS[6]} != "no" ]]; then
                             echo "
 ###Doorpi
-###" | sudo tee -a /etc/samba/smb.conf
+###" | tee -a /etc/samba/smb.conf
                         fi
                         InstallSamba SAMBASPECS | dialog --progressbox 30 100
                     else
                         touch ${TEMPDIR}/result
-                        echo "User Exit" > ${TEMPDIR}/result
+                        echo "PASS" > ${TEMPDIR}/result
                     fi
                 else
                     touch ${TEMPDIR}/result && echo "Install Doorpi first" > ${TEMPDIR}/result
                 fi
 	              ;;
 
-            "80")
+            "90")
                 StartService
                 ;;
 
-            "90")
+            "100")
                 StopDaemon
                 ;;
 
-            "100")
+            "110")
                 DoorpiDebugRun
                 ;;
 
-            "110")
+            "120")
                 DoorpiBackup
                 ;;
 
-            "120")
+            "130")
                 DoorpiRestore
                 ;;
     esac
@@ -1269,8 +1419,7 @@ defaults.ctl.card $CARDNR" | sudo tee /etc/asound.conf
         result=$(cat ${TEMPDIR}/result)
         rm ${TEMPDIR}/result
     fi
-    sleep 5
-    dialog --msgbox "$result" 16 78
+    [[ $result != "PASS" ]] && sleep 5 && dialog --msgbox "$result" 16 78
 done
 clear
 exit
