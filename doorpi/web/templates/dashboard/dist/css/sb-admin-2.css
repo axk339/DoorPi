@@ -418,6 +418,28 @@ p.dl-300 {
     border: 0px;
 }
 
+.camera-screenshots,
+.camera-liveview {
+  margin:auto;
+  height:600px;
+  float:left;
+  display:table-cell;
+}
+
+.liveview {
+  width: 100%;
+  height: 100%;
+  border:0px
+}
+
+.camera-liveview{
+  width: 59%;
+}
+
+.camera-screenshots{
+  width: 40%;
+}
+
 #removeNewConfigRow {
     visibility: hidden;
 }

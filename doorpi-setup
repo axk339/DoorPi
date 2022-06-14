@@ -33,6 +33,7 @@ CONFIG=/boot/config.txt
 declare -A DATA_DESTINATION
 DATA_DESTINATION["doorpi.service.in"]="/usr/local/lib/systemd/system/doorpi.service"
 DATA_DESTINATION["doorpi.socket"]="/usr/local/lib/systemd/system/doorpi.socket"
+DATA_DESTINATION["vs_index.html"]="/usr/local/share/v4l2rtspserver/index.html"
 
 #Build versions
 GET_PIP_URL="https://bootstrap.pypa.io/pip/get-pip.py"
@@ -91,9 +92,9 @@ Sound Card Selector         - Sets the default card to use\n\
 List Configured Phones      - A list of crucial variables and connection state with asterisk\n\n\
 Additions:\n\
 Video Support               - Builds the whole video stack to be able to use video SIP calls\n\
-RTSP Videoserver            - Adds a RTSP Stream Server. Especially useful if you want to capture your door video feed with different\n\
-                              services. (DoorPi SIP, HomeAssistant, ...)\n\
-Samba Support               - Samba as server and/or client. Distribute your files over your network\n\n\
+Videoserver                 - Serving HTTP/RTSP. Especially useful if you want to capture your door video feed with different\n\
+                              services (DoorPi SIP, HomeAssistant, ...), yet also used in the web presence\n\
+Samba Support               - Configures Samba as server/client.. \n\n\
 Maintenance:\n\
 Enable/Start Doorpi service - When everything is said and done start your DoorPi\n\
 Stop Doorpi service         - Stop Doorpi for further maintenance\n\
@@ -111,13 +112,13 @@ As always, defaults are given, but you may want to choose custom ones\n\n\
 [UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept ALL changes [ESC] Closes dialog"
 
 RTSP_DESC="\n\
-Builds and configures a RTSP server. You can run this multiple times if you wish to change this specifications.\n\n\
+Builds and configures a RTSP/HTTP server. You can run this multiple times if you wish to change this specifications.\n\n\
 Video Width       - The resolution in X pixel\n\
 Video Height      - The resolution in Y pixel\n\
 Video Frames      - Frames per second\nVideo Server Port - The port the server should use\n\
-Video Device      - the device name of the BUILTIN MODULE the stream is taken from\n\n\
+Video Device      - the device name of the BUILTIN MODULE the stream is sourced from\n\n\
 The defaults are on the low end. Generally, the higher the more load.\n\
-With the CORE install you've additionally configured a virtual device named 'VirtualDoorpiCam #1'. If you rebooted since, you are able to check it with 'v4l2-ctl --list-devices', so you chan distinguish the builtin one from the virtual. In most of the cases the builtin should be /dev/video1 (the default) - as we load it later in the boot sequence.\n\n\
+With the CORE install you've additionally configured a virtual device named 'VirtualDoorpiCam #1'. If you rebooted since, you are able to check it with 'v4l2-ctl --list-devices', so you chan distinguish the builtin one from the virtual. The setup tries to parse the builtin one, but you may choose to double check\n\n\
 NOTE: If you just want to use an existing stream of some sort (directly connected or otherwise), you (obviously) dont need to built this. Have a look at the webconfig (videoserver section)\n\n\
 [UP/DOWN] Move though items [TAB] Move through menu options [Enter] Accept ALL changes [ESC] Closes dialog"
 
@@ -868,8 +869,13 @@ Grab some client (eg VLAN) and test the stream under rtsp://$(hostname -I | awk 
         echo " Configuration changed" > ${TEMPDIR}/result
     fi
 
-    sed -i "s#^ExecStart=.*#ExecStart=\/usr\/local\/bin\/v4l2rtspserver -W $VID_WIDTH -H $VID_HEIGHT -F $VID_FRAMES -P $VID_SER_PORT $VID_DEV#g" /lib/systemd/system/v4l2rtspserver.service
-    systemctl is-enabled --quiet v4l2rtspserver 2>/dev/null || systemctl enable v4l2rtspserver >> "$out" 2>&1
+    sed -i "s#^ExecStart=.*#ExecStart=\/usr\/local\/bin\/v4l2rtspserver -W $VID_WIDTH -H $VID_HEIGHT -F $VID_FRAMES -S -p $VID_SER_PORT $VID_DEV#g" /lib/systemd/system/v4l2rtspserver.service
+    cp "$DATADIR"/vs_index.html "${DATA_DESTINATION[vs_index.html]}"
+    if systemctl is-enabled --quiet v4l2rtspserver 2>/dev/null; then
+        systemctl daemon-reload >> "$out" 2>&1
+    else
+        systemctl enable v4l2rtspserver >> "$out" 2>&1
+    fi
     systemctl start v4l2rtspserver >> "$out" 2>&1
     set +e
 }
@@ -1101,8 +1107,8 @@ do
         "50" "| List Configured Phones" \
         ""   "" \
         "60" "| Video Support              Adds Video Support (PJSIP)" \
-        "70" "| RTSP Videoserver           Adds a RTSP Stream Server readable to PJSIP" \
-        "80" "| Samba Client               Adds Samba client" \
+        "70" "| RTSP/HTTP Videoserver      Enhance accessibility of your video source" \
+        "80" "| Samba Server/Client        Distribute your files over your network" \
         ""   "" \
         "90" "| Enable/Start Doorpi systemd service" \
         "100" "| Stop Doorpi systemd service" \
@@ -1323,7 +1329,7 @@ defaults.ctl.card $CARDNR" | tee /etc/asound.conf >> "$out" 2>&1
                 BUILTIN_DEV=$( v4l2-ctl --list-devices 2>/dev/null | awk "/mmal service/{ getline; print }" | tr -d '[:space:]' )
                 [[ -z $BUILTIN_DEV ]] && BUILTIN_DEV="/dev/video1"
 
-                VIDEOSPECS=( $( dialog --backtitle "Doorpi Setup $version" --title "RTSP Videoserver setup" \
+                VIDEOSPECS=( $( dialog --backtitle "Doorpi Setup $version" --title "RTSP/HTTP Videoserver setup" \
                 --begin "$BORDER" $(expr $(expr "$MAXX" / 2) - $(expr "$INFOBOXX" / 2) - 1) --infobox "$RTSP_DESC" "$INFOBOXY" "$INFOBOXX" \
                 --and-widget --begin $(expr "$BORDER" + "$INFOBOXY" + 2 ) $(expr $(expr "$MAXX" / 2) - $(expr "$BOXX" / 2) - 1) --form "\nVideoserver Specs" "$BOXY" "$BOXX" "$FORMITEMS" \
                 " Video Width:" 1 1 "720" 1 "$FORMX" "$FORMX" "$FORMX" \

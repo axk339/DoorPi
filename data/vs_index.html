@@ -1,0 +1,27 @@
+<html>
+    <link rel="shortcut icon" href="about:blank"/>
+    <style>
+    video { margin: 0 auto; width: 100%; height: 100%; }
+    </style>
+    <body>
+        <!--fill streamList variable with the list of streams -->
+        <script src="/getStreamList?streamList" ></script>
+        <div id="videos"></div>
+        <script src="hls.js/dist/hls.light.min.js" ></script>
+        <script>
+                if (Hls.isSupported()) {
+                        var videos = document.getElementById("videos")
+                        streamList.forEach( (stream) => {
+                                var video = document.createElement("video");
+                                videos.appendChild(video)
+                                var hls = new Hls();
+                                hls.loadSource(stream+".m3u8");
+                                hls.attachMedia(video);
+                                hls.on(Hls.Events.MANIFEST_PARSED, function() { video.muted = true; video.play(); });
+                        })
+                } else {
+                        alert("HLS not supported");
+                }
+        </script>
+    </body>
+</html>
