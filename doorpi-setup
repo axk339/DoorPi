@@ -324,6 +324,16 @@ EOF
 
     SysInstaller install PKGS
 
+    #setup a virtual loopback device
+    echo "#config v4l2loopback module" >> "$out" 2>&1
+    if ! grep -q "^v4l2loopback" /etc/modules; then
+        printf "v4l2loopback\n" >> /etc/modules
+    fi
+    echo 'options v4l2loopback devices=1
+options v4l2loopback max_buffers=2
+options v4l2loopback exclusive_caps=1
+options v4l2loopback card_label="VirtualDoorpiCam #1"' | tee /etc/modprobe.d/v4l2loopback.conf >> "$out" 2>&1
+
     #TODO user install -> add PATH
     curl -s "${GET_PIP_URL}" | "/bin/python3" - >> "$out" 2>&1
 
@@ -363,8 +373,10 @@ prepare_install () {
     substkeys["!!user!!"]="$USER"
     substkeys["!!group!!"]="$GROUP"
 
-    for _PATH in "$DATADIR"/* ; do
-        FILE=$( basename "$_PATH" )
+    for FILE in "${!DATA_DESTINATION[@]}" ; do
+        if [[ ! "doorpi.service.in doorpi.socket" =~ (^|[[:space:]])$FILE($|[[:space:]]) ]]; then
+            continue
+        fi
         destination="${DATA_DESTINATION[$FILE]}"
         cp "$DATADIR"/"$FILE" "$TEMPDIR"/
         for v in "${!substkeys[@]}"; do
@@ -375,8 +387,9 @@ prepare_install () {
         if [[ -n $destination ]] ; then
             [[ ! -d $destination ]] && mkdir -p $(dirname "$destination")
             mv "$TEMPDIR"/"$FILE" "$destination"
+        else
+            rm "$TEMPDIR"/"$FILE"
         fi
-        rm "$TEMPDIR"/"$FILE"
     done
 
     for folder in "$CONFIG_DIR" "$MNT_DIR" "$LOG_DIR" "$SRC_DIR" "$BKP_DIR"; do
@@ -388,18 +401,7 @@ prepare_install () {
         echo 'base_path = "'"$WORKING_DIR"'"' | tee "$CONFIG_FILE" > /dev/null 2>&1
     fi
 
-    #setup a virtual loopback device
-    echo "#config v4l2loopback module" >> "$out" 2>&1
-    if ! grep -q "^v4l2loopback" /etc/modules; then
-        printf "v4l2loopback\n" >> /etc/modules
-    fi
-    echo 'options v4l2loopback devices=1
-options v4l2loopback max_buffers=2
-options v4l2loopback exclusive_caps=1
-options v4l2loopback card_label="VirtualDoorpiCam #1"' | tee /etc/modprobe.d/v4l2loopback.conf >> "$out" 2>&1
-
-    #TODO systemd notify socket (changed with move to user installs)
-    if ! grep -q "^NOTIFY_SOCKET" /etc/modules; then
+    if ! grep -q "NOTIFY_SOCKET" /root/.bashrc; then
         echo "export NOTIFY_SOCKET=[::]:50317" >> /root/.bashrc
     fi
 
