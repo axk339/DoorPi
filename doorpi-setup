@@ -799,7 +799,6 @@ ShowPhoneConfig () {
     i=2
     #check if endpoint is connected
     for pid in "${PIDS[@]}"; do
-        echo "$i"
         if containsElement "$pid" "${PACTIVE[@]}"; then
             connected="yes"
         else
