@@ -546,15 +546,13 @@ BuildH264 () {
         make clean >> "$out" 2>&1
         echo "cleaned old build"
     fi
-    echo "... Building package"
+    echo "... Building library"
     make -j`nproc` >> "$out" 2>&1
-    echo "... Installing package"
+    echo "... Installing library"
+    echo ""
     make install >> "$out" 2>&1
     cd ${TEMPDIR} && rm -rf openh264
     ldconfig
-    echo "
-Done building OpenH264
-"
     set +e
 }
 
