@@ -364,6 +364,7 @@ prepare_install () {
     CONFIG_FILE="$CONFIG_DIR"/"$PROJECT".ini
     MNT_DIR="$WORKING_DIR"/mnt
     SRC_DIR="$WORKING_DIR"/src
+    SCRIPTS_DIR="$WORKING_DIR"/scripts
     BKP_DIR="$WORKING_DIR"/backup
     LOG_FILE=/var/log/"$PROJECT"/"$PROJECT".log
     LOG_DIR=/var/log/"$PROJECT"
@@ -397,7 +398,7 @@ prepare_install () {
         fi
     done
 
-    for folder in "$CONFIG_DIR" "$MNT_DIR" "$LOG_DIR" "$SRC_DIR" "$BKP_DIR"; do
+    for folder in "$CONFIG_DIR" "$MNT_DIR" "$LOG_DIR" "$SRC_DIR" "$BKP_DIR" "$SCRIPTS_DIR"; do
         mkdir -p "$folder"
     done
 

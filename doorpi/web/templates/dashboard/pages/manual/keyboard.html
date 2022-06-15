@@ -6,33 +6,33 @@
         <div class="desc-body">
             <p class="desc-heading">Currently supported keyboard [type]s:</p>
             <p><span class="definitions">filesystem</span><span> pseudo-keyboard using files</span></p>
-            <p><span class="definitions">gpio</span><span> RaspberryPi onboard header</p>
-            <p><span class="definitions">piface</span><span> PiFace IO expander</p>
-            <p><span class="definitions">pn532</span><span> PN532 NFC module</p>
-            <p><span class="definitions">rdm6300</span><span> RDM6300 RFID module</p>
-            <p><span class="definitions">serial</span><span> Serially connected keyboard</p>
+            <p><span class="definitions">gpio</span><span> RaspberryPi onboard header</span></p>
+            <p><span class="definitions">piface</span><span> PiFace IO expander</span></p>
+            <p><span class="definitions">pn532</span><span> PN532 NFC module</span></p>
+            <p><span class="definitions">rdm6300</span><span> RDM6300 RFID module</span></p>
+            <p><span class="definitions">serial</span><span> Serially connected keyboard</span></p>
             <br>
 
-            <p class="desc-heading">Konfigurationsbeispiele</p>
-            <p><span class="bold">[keyboard.onboardpins]</span><span class="hv">  # Definition eines Keyboards namens "onboardpins"</span></p>
-            <p><span class="bold">type = "gpio"</span><span class="hv">  # ... vom Typ GPIO</span></p>
-            <p><span class="bold">mode = "BCM"</span><span class="hv">  # ... Nummerierung BCM</span></p>
-            <p><span class="bold">pull_up_down = "UP"</span><span class="hv">  ... als Pullup IO</span></p>
-            <p><span class="bold">input.27 = "call:**613#614"</span><span class="hv">  ... das bei Schließen des Pin GPIO_27 die Aktion "call:..." ausführt </span></p>
+            <p class="desc-heading">Configuration example</p>
+            <p><span class="bold">[keyboard.onboardpins]</span><span class="hv">  # Definition of a keyboard named "onboardpins"</span></p>
+            <p><span class="bold">type = "gpio"</span><span class="hv">  # ... of type GPIO (see "Currently supported keyboards" above) </span></p>
+            <p><span class="bold">mode = "BCM"</span><span class="hv">  # ... with numbering BCM</span></p>
+            <p><span class="bold">pull_up_down = "UP"</span><span class="hv">  ... as pullup IO</span></p>
+            <p><span class="bold">input.27 = "call:**613#614"</span><span class="hv">  ... which performs a "call" action on closing of pin GPIO_27</span></p>
             <br>
-            <p class="desc-heading">Erweiterte Erklärungen</p>
+            <p class="desc-heading">Further explanations</p>
             <dl>
                 <dt class="dl-mirrored dl-400">keyboard.*.polarity</dt> <dd class="dl-400 hv">A polarity of "HIGH" means VCC=true and GND=false on a pin.<br>
                     A polarity of "LOW" reverses these interpretations. Affects both input and output pins.</dd>
             </dl>
             <br>
-            <p class="desc-heading">Inputliste</p>
+            <p class="desc-heading">Actions</p>
             <dl>
                 <dt class="dl-mirrored dl-400"><span>call:</span><span class="command">address</span></dt> <dd class="dl-400 hv">Call the specified SIP {address}<br><br>Following actions will be executed immediately and will not wait
                     for the call to connect, time out or finish. <br><br>Example: call:**613#614</dd>
                 <dt class="dl-mirrored dl-400"><span>callf:</span><span class="command">file</span></dt> <dd class="dl-400 hv">Call the SIP address specified in {file}.  The file will be read
                     each time the event is fired, contrary to {call} which has a static address. See the note about {call}.</dd>
-                <dt class="dl-mirrored dl-400"><span>exec:</span><span class="command">command</span></dt> <dd class="dl-400 hv">Execute the {command} with /bin/sh.</dd>
+                <dt class="dl-mirrored dl-400"><span>exec:</span><span class="command">command,restrict</span></dt> <dd class="dl-400 hv">Executes a system {command} in a shell. Optionally, if `,restrict` is added this command is running only once until it is completed. (command `python !BASEPATH!/scripts/script.py is resolving to base path directory`)</dd>
                 <dt class="dl-mirrored dl-400">hangup</dt> <dd class="dl-400 hv">Hang up all active (connected/ringing) SIP calls.</dd>
                 <dt class="dl-mirrored dl-400"><span>http_request:</span><span class="command">url</span></dt> <dd class="dl-400 hv">Perform an HTTP GET request to {url}.</dd>
                 <dt class="dl-mirrored dl-400"><span>log:</span><span class="command">message</span></dt> <dd class="dl-400 hv">Print the formatted {message} into the log (with "info" log level)</dd>
