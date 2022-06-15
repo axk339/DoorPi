@@ -188,8 +188,9 @@ SwapCheck () {
     echo "Size check ..."
     if [ $TOTALMEM -lt $MINMEM ] ; then
         dphys-swapfile swapoff >> "$out" 2>&1
-        #round up
-        SWAPNEEDED=$(expr $(expr $MINMEM - $MEM + 1023 ) / 1024)
+        SWAPNEEDED=$(expr $(expr $MINMEM - $MEM ) / 1024)
+        #round up to 10
+        SWAPNEEDED=$(( ((${SWAPNEEDED%.*}+10)/10)*10 ))
         echo "Swap needed $SWAPNEEDED Mb" >> "$out" 2>&1
         sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${SWAPNEEDED}/g" /etc/dphys-swapfile
         dphys-swapfile setup >> "$out" 2>&1
