@@ -45,7 +45,7 @@ class MycroftConnect(object):
     def connections(self):
         return self._connections
 
-    def send_message(self, htype="", mtype="", text=""):
+    def send_message(self, text="", mtype="", htype=""):
         _valid_htypes = [m.value for m in HiveMessageType]
         received = None
 
@@ -54,7 +54,7 @@ class MycroftConnect(object):
         elif htype.lower() in _valid_htypes:
             htype = HiveMessageType(htype)
         else:
-            LOGGER.error(f"The first message type has to be one of {_valid_htypes}")
+            LOGGER.error(f"The last message type has to be one of {_valid_htypes}")
             return received
 
         # message type for mycroft is pretty much a free for all, default to speech service
@@ -65,7 +65,7 @@ class MycroftConnect(object):
 
         payload = Message(mtype,
                           data={'utterance': text},
-                          context=self.create_context(htype, mtype, text))
+                          context=self.create_context(text, mtype, htype))
         message = HiveMessage(htype, payload)
 
         if self.bus is not None and self.connected:
@@ -79,7 +79,7 @@ class MycroftConnect(object):
 
         return received
 
-    def create_context(self, htype, mtype, text):
+    def create_context(self, text, mtype, htype):
         _ctxt = {}
         if mtype == "speak":
             _ctxt["destination"] = "audio"

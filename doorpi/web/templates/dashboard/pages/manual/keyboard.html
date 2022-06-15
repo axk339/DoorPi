@@ -48,10 +48,14 @@
                 <dt class="dl-mirrored dl-400"><span>symcon_ips3:</span><span class="command">action,key[,value]</span></dt> <dd class="dl-400 hv">Perform an action with the Symcon IPS 3.<br><br>
                     set: Set {key} to the formatted {value}<br>
                     call: Retrieve the value of {key} and call it as SIP address.  See the note about the {call} action.</dd>
-                <dt class="dl-mirrored dl-400"><span>mycroft_send:</span><span class="command">msgtype_hm, msgtype_my, text</span></dt> <dd class="dl-400 hv">Send a message to the mycroft message bus.<br><br>
-                    msgtype_hm: Hivemind message type to tell how to route the message<br>
-                    msgtype_my: Mycroft message type to tell which service to use<br>
-                    text: text on the message that is uttered</dd>
+                <dt class="dl-mirrored dl-400"><span>to_mycroft:</span><span class="command">text, msgtype_my, msgtype_hm </span></dt> <dd class="dl-400 hv">Send a message to the mycroft message bus.<br><br>
+                    text: text (or: the "utterance") that can be spoken by mycrofts speech service or processed by a skill<br>
+                    msgtype_my: Mycroft message type to tell which service to use (defaults to "speak")<br>
+                    msgtype_hm: Hivemind message type to tell how to route the message (defaults to "BUS" message)<br><br>
+                    Examples:<br>
+                    if mycroft should speak "There is someone at the door" -> "to_mycroft:There is someone at the door"<br>
+                    trigger a skill event (that is defined on mycrofts' end) -> "to_mycroft:door,skill.camera.showcam"<br>
+                    (this is how i automatically turn on a TV showing the door camera if someone rings)</dd>
             </dl>
             <p>More on the inputs in the specific config sections</p>
         </div>
