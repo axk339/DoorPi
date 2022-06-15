@@ -789,7 +789,8 @@ ConfigPhone () {
     echo "
 Phones configured
 
-(If you want to add another client phones later, just use the menu option again)" > ${TEMPDIR}/result
+(If you want to add another client phones later, just use the menu option again.
+Some connecting Hardware/Software - depending on their refresh rate/configuration - will need a restart to connect)" > ${TEMPDIR}/result
 }
 
 ShowPhoneConfig () {
@@ -1266,9 +1267,10 @@ Adress: '<num>' <sip:<num>@<doorpiip>>\nServeradress: <sip:<doorpiip>;transport=
                     fi
 
                     dialog --backtitle "Doorpi Setup" --title "Asterisk Phone Setup" \
-                           --yesno "\nDo you want to add another $PHONE" 7 60
+                           --yesno "\nDo you want to add another $PHONE ?" 7 60
                     ADD="$?"
                 done
+                service asterisk restart
                 ;;
 
             "40")
