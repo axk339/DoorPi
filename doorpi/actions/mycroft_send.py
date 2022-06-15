@@ -24,9 +24,9 @@ class MycroftSendAction(Action):
 
         sent = mycroft.send_message(self.hivetype, self.msgtype, self.text)
         if sent:
-            LOGGER.info("Message sent to Mycroft")
+            LOGGER.debug("Message sent to Mycroft")
         else:
-            LOGGER.info("Couldn't send the message")
+            LOGGER.error("Couldn't send the message")
 
     def __str__(self) -> str:
         return f"sending mycroft: {self.hivetype}, {self.msgtype}, {self.text}"
