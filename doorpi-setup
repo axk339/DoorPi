@@ -257,17 +257,20 @@ SysInstaller () {
         ${LUPDATE_CMD} >> "$out" 2>&1
 
     elif [[ $MODE == "install" ]]; then
-        [[ -n $VERBOSE ]] && printf "Check System Dependencies ...\n\n"
         set -e
-        if [[ -z $VERBOSE ]]; then
-            for pkg in "${PKGS[@]}"
-            do
-                if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
-                    echo "... installing ${pkg}"
-                    ${INST_CMD} ${pkg} 1>/dev/null
+        INSTALL=0
+        for pkg in "${PKGS[@]}"
+        do
+            if ! containsElement "$pkg" "${PKG_INSTALLED[@]}"; then
+                if [[ -z $VERBOSE ]]; then
+                    printf "Installing System Dependencies ...\n\n"
                 fi
-            done
-        else
+                INSTALL=1
+                break
+            fi
+        done
+
+        if [[ $INSTALL -eq 1 ]]; then
             ${INST_CMD} "${PKGS[@]}" >> "$out" 2>&1
         fi
         set +e
