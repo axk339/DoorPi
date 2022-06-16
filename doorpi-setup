@@ -1079,6 +1079,17 @@ StartService() {
     trap - SIGINT
 }
 
+DoorpiUpdate() {
+    set -e
+    echo "Git pull ..."
+    git stash >> "$out" 2>&1
+    git fetch >> "$out" 2>&1
+    git pull >> "$out" 2>&1
+    echo "Uninstall old package ..."
+    python3 -m pip uninstall -y doorpi >> "$out" 2>&1
+    set +e
+}
+
 ## MAIN ROUTINE
 
 SysInstaller updatelist
@@ -1104,7 +1115,16 @@ do
     INFOBOXY=30
     INFOBOXX=140
     BORDER=$( expr $( expr "$MAXY" - "$BOXY" - "$INFOBOXY" - 2 ) / 2 )
-    [[ -z $BASE_PATH ]] && DOORPI_INST="Doorpi Installation        Installs Core Doorpi" || DOORPI_INST="Doorpi Update              Fetches the new updates"
+    if [[ -z $BASE_PATH ]]; then
+        DOORPI_INST="Doorpi Installation        Installs Core Doorpi"
+    else
+        UPTODATE=$( git status | grep "up to date" )
+        if [[ -z $UPTODATE ]]; then
+            DOORPI_INST="Doorpi Update              Notification if available"
+        else
+            DOORPI_INST="Doorpi Update (Available)  Fetches the new updates"
+        fi
+    fi
 
     CHOICE=$(
         dialog --backtitle "Doorpi Setup $version" \
@@ -1164,18 +1184,20 @@ do
                 else
                     systemctl is-active --quiet doorpi && systemctl stop doorpi >> "$out" 2>&1
                     cd "$SRC_PATH"
-                    git fetch >> "$out" 2>&1
-                    git pull >> "$out" 2>&1
-                    python3 -m pip uninstall doorpi >> "$out" 2>&1
+                    DoorpiUpdate | dialog --progressbox $(expr "$MAXY" - 40) $(expr "$MAXX" - 80)
                     INST_MODE="update"
                 fi
-                python3 -m pip install --prefix $PREFIX --progress-bar off --ignore-installed PyYAML . 2>> "$out" | dialog --progressbox $(expr "$MAXY" - 40) $(expr "$MAXX" - 80)
-                if [[ $INST_MODE == "update" ]]; then
-                    dialog --msgbox "Doorpi successfully updated and has to exit now.\n\nTo restart the service just hit the 'Enable/Start Doorpi systemd service' menu point again"
-                    exit
+
+                if [[ $? -eq 0 ]]; then
+                    python3 -m pip install --prefix $PREFIX --progress-bar off --ignore-installed PyYAML . 2>> "$out" | dialog --progressbox $(expr "$MAXY" - 40) $(expr "$MAXX" - 80)
+                    if [[ $INST_MODE == "update" ]]; then
+                        dialog --msgbox "Doorpi successfully updated and has to exit now.\n\nTo restart the service just hit the 'Enable/Start Doorpi systemd service' menu point again" 16 78
+                        clear
+                        exit
+                    fi
+                    touch ${TEMPDIR}/result
+                    echo "Doorpi successfully installed" > ${TEMPDIR}/result
                 fi
-                touch ${TEMPDIR}/result
-                echo "Doorpi successfully installed" > ${TEMPDIR}/result
 	            ;;
 
 	          "20")
