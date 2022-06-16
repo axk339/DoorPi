@@ -865,7 +865,7 @@ BuildVideoserver () {
         touch ${TEMPDIR}/result
         echo " RTSP/HTTP videoserver built.
 
-Grab some client (eg VLAN) and test the stream under rtsp://$(hostname -I | awk '{print $1}'):$VID_SER_PORT/unicast
+Grab some client (eg VLC) and test the stream under rtsp://$(hostname -I | awk '{print $1}'):$VID_SER_PORT/unicast
 
 or
 
