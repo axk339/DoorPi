@@ -109,7 +109,8 @@ class Pjsua2(AbstractSIPPhone):
                 return False
 
             # Dispatch creation of the call to the main thread
-            self._waiting_calls.append(canonical_uri)
+            if canonical_uri not in self._waiting_calls:
+                self._waiting_calls.append(canonical_uri)
             return True
 
     def dump_call(self) -> dict:
