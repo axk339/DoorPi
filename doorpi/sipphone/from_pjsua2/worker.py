@@ -157,7 +157,8 @@ class Worker:
                                 self.__config["ringtime"],
                             )
                             call.hangup(prm)
-                            self.__phone._ringing_calls.remove(call)
+                            #BRI 10.08.2025 already removed in callbacks.py
+                            #self.__phone._ringing_calls.remove(call)
                             synthetic_disconnect = True
                     except pj.Error as err:
                         if err.reason.endswith("(PJSIP_ESESSIONTERMINATED)"):
