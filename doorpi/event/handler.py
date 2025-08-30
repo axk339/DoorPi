@@ -20,7 +20,9 @@ from typing import (
 import doorpi.actions
 import doorpi.event
 
-from . import log
+#skip eventDB logging 
+#from . import log
+from . import logFake as log
 
 LOGGER: doorpi.DoorPiLogger = logging.getLogger(__name__)  # type: ignore
 
