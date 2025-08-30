@@ -39,6 +39,7 @@ class GPIOKeyboard(AbstractKeyboard):
         self._inputs = [int(i) for i in self._inputs if i.isdigit()]  # type: list[int]
         gpio.setup(self._inputs, gpio.IN, pull_up_down=pull)
         for input_pin in self._inputs:
+            LOGGER.debug("Registering input pin %s", input_pin)
             gpio.add_event_detect(
                 input_pin,
                 gpio.BOTH,
@@ -50,7 +51,8 @@ class GPIOKeyboard(AbstractKeyboard):
             )
         output_pins = [int(i) for i in self._outputs.keys() if i.isdigit()]  # type: list[int]
         gpio.setup(output_pins, gpio.OUT)
-        for output_pin in output_pins:
+        for output_pin in self._outputs:
+            LOGGER.debug("Registering output pin %s", output_pin)
             self.output(output_pin, False)
 
     def destroy(self) -> None:

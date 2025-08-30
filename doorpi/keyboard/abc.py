@@ -144,7 +144,8 @@ class AbstractKeyboard:
             ``_normalize()``
         """
         del value
-        if pin not in self._outputs:
+        #BRI 28.09.2024 added 'str(pin)', needed for gpio keyboard
+        if str(pin) not in self._outputs:
             raise ValueError(f"Unknown output pin {self.name}.{pin}")
         return False
 
