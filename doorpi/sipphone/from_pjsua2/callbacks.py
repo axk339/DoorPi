@@ -154,7 +154,10 @@ class CallCallback(pj.Call):
 
     def onCallMediaState(self, prm: pj.OnCallMediaStateParam) -> None:
         ci = self.getInfo()
-        if ci.state != pj.PJSIP_INV_STATE_CONFIRMED:
+        #fix connecting incoming calls (state 2)
+        #important to keep supressing other media, e.g. state 3 is ring-tone (overrides doorpi dialtone player)
+        #if ci.state != pj.PJSIP_INV_STATE_CONFIRMED:
+        if ci.state != pj.PJSIP_INV_STATE_CONFIRMED and ci.state != 2:
             LOGGER.debug("Ignoring media change in call to %r", ci.remoteUri)
             return
 
