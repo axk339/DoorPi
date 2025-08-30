@@ -68,7 +68,9 @@ class SnapshotAction(Action):
         """Computes the next snapshot's path."""
 
         path = cls.get_full_path() / datetime.datetime.now().strftime(
-            "%Y-%m-%d_%H:%M:%S.jpg"
+            #Replace : with -
+            #"%Y-%m-%d_%H:%M:%S.jpg"
+            "%Y-%m-%d_%H-%M-%S.jpg"
         )
         return path
 
