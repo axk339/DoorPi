@@ -1,7 +1,10 @@
 """Actions that control event execution: sleep, waitevent"""
 import threading
-from time import sleep
+#from time import sleep
+import time
 from typing import Any, Mapping
+import os
+from pwd import getpwnam
 
 import doorpi.actions
 import doorpi.event
@@ -17,7 +20,7 @@ class SleepAction(Action):
         self.__time = float(time)
 
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
-        sleep(self.__time)
+        time.sleep(self.__time)
 
     def __str__(self) -> str:
         return f"Wait for {self.__time} seconds"
@@ -62,3 +65,48 @@ class WaitEventAction(Action):
 
     def __repr__(self) -> str:
         return f"waitevent:{self.__eventname},{self.__action}"
+
+
+class SkipAction(Action):
+    """Skip further event execution if last event less x seconds."""
+
+    def __init__(self, time: str) -> None:
+        super().__init__()
+        self.__time = float(time)
+
+    def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
+        if extra["last_finished"] != None:
+            if ((time.time() - extra["last_finished"]) < self.__time):
+                raise doorpi.event.AbortEventExecution()
+
+    def __str__(self) -> str:
+        return f"Skip if repeat before {self.__time} seconds"
+
+    def __repr__(self) -> str:
+        return f"skip:{self.__time}"
+
+
+class ConditionAction(Action):
+    """Skip next action of event execution if last condition in text file true."""
+
+    def __init__(self, matchtext: str, path: str, filename: str) -> None:
+        super().__init__()
+        self.__matchtext = matchtext
+        self.__filepath = path + "/" + filename
+        os.makedirs (path, exist_ok=True)
+        uid = getpwnam("www-data").pw_uid
+        gid = getpwnam("www-data").pw_gid
+        os.chown(path, uid, gid)
+        
+    def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
+        with open(self.__filepath) as f:
+            content = f.readline()
+        if (content == self.__matchtext):
+            raise doorpi.event.SkipEventExecution()
+
+    def __str__(self) -> str:
+        return f"Skip next action if '{self.__matchtext}' in '{self.__filepath}'"
+
+    def __repr__(self) -> str:
+        return f"cond:{self.__matchtext}"
+
