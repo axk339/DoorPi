@@ -25,12 +25,12 @@ class OSExecuteAction(Action):
             LOGGER.debug("This action is restricted to run only once")
             return
 
-        LOGGER.info("[%s] Executing shell command: %s", event_id, self.__cmd)
+        LOGGER.debug("[%s] Executing shell command: %s", event_id, self.__cmd)
         self.__running = True
-        result = subprocess.run(self.__cmd, shell=True)
+        result = subprocess.run(self.__cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if result.returncode == 0:
-            LOGGER.info("[%s] Command returned successfully", event_id)
+            LOGGER.debug("[%s] Command returned successfully", event_id)
         else:
             LOGGER.info(
                 "[%s] Command returned with code %d",
