@@ -15,6 +15,17 @@ from doorpi.actions import CallbackAction
 
 LOGGER = logging.getLogger(__name__)
 
+#https://docs.pjsip.org/en/latest/pjsua2/using/media_audio.html#playing-a-wav-file
+class noloopPlayer (pj.AudioMediaPlayer):
+    
+    def __init__ (self, callback):
+        super().__init__()
+        self.callback = callback
+    
+    def onEof2(self):
+        super().onEof2()
+        LOGGER.info ("DialTonePlayer reaching eof, stopping...")
+        self.callback()
 
 class DialTonePlayer:
     """Plays the dial tone while dialing."""
@@ -39,7 +50,9 @@ class DialTonePlayer:
             )
             filename = ctx.__enter__()  # pylint: disable=no-member
 
-        self._player = pj.AudioMediaPlayer()
+        #play dialtone once and automatically stop at end of file
+        #self._player = pj.AudioMediaPlayer()
+        self._player = noloopPlayer(self.stop)
         self._target = None
         self._level = loudness
 
@@ -48,11 +61,13 @@ class DialTonePlayer:
 
         eh.register_action("OnCallOutgoing_S", ac_start)
         eh.register_action("OnCallConnect_S", ac_stop)
-        eh.register_action("OnCallDisconnect_S", ac_stop)
-        eh.register_action("OnCallUnanswered_S", ac_stop)
+        #do not stop dialtone player for unansweted calls
+        #eh.register_action("OnCallDisconnect_S", ac_stop)
+        #eh.register_action("OnCallUnanswered_S", ac_stop)
 
         try:
-            self._player.createPlayer(str(filename))
+            #adding PJMEDIA_FILE_NO_LOOP attribute... should be read from conf file
+            self._player.createPlayer(str(filename), pj.PJMEDIA_FILE_NO_LOOP) 
         except pj.Error as err:
             LOGGER.error("Unable to create dial tone player: %s", err.info())
             self._player = None
@@ -67,6 +82,8 @@ class DialTonePlayer:
             self._target = (
                 pj.Endpoint.instance().audDevManager().getPlaybackDevMedia()
             )
+        #adding loudness adjustment ... should be read from conf file
+        self._player.adjustTxLevel(0.05)   
         self._player.startTransmit(self._target)
 
     def stop(self) -> None:
