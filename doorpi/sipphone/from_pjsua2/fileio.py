@@ -107,7 +107,9 @@ class CallRecorder:
     ) -> None:
         self.__path = path
         self.__early = early
-        self.__keep = keep
+        #should be read from config
+        #self.__keep = keep
+        self.__keep = 0
 
         self.__recorder: Optional[pj.AudioMediaRecorder] = None
 
@@ -117,24 +119,35 @@ class CallRecorder:
         eh.register_action("OnCallDisconnect_S", CallbackAction(self.stop))
         eh.register_action("OnCallDisconnect", CallbackAction(self.cleanup))
         if self.__path:
-            LOGGER.debug("Call recording destination: %s", self.__path)
+            #LOGGER.debug("Call recording destination: %s", self.__path)
+            LOGGER.info("Call recording destination: %s", self.__path)
 
     def start(self) -> None:
         """Start recording into a new file"""
         if self.__recorder is None:
             if not self.__path:
                 return
+            #create year folder if recordings are kept forever
+            if self.__keep <= 0:
+                self.__pathyear = self.__path / datetime.datetime.now().strftime(
+                    "%Y"
+                )
+            else:
+                self.__pathyear = self.__path
             try:
-                self.__path.mkdir(parents=True, exist_ok=True)
+                self.__pathyear.mkdir(parents=True, exist_ok=True)
+                #self.__path.mkdir(parents=True, exist_ok=True)
             except OSError:
                 LOGGER.exception(
                     "Cannot create recording directory, unable to record call"
                 )
                 return
-            fname = self.__path / datetime.datetime.now().strftime(
+            #fname = self.__path / datetime.datetime.now().strftime(
+            fname = self.__pathyear / datetime.datetime.now().strftime(
                 "recording_%Y-%m-%d_%H-%M-%S.wav"
             )
-            LOGGER.debug("Starting recording into file %s", fname)
+            #LOGGER.debug("Starting recording into file %s", fname)
+            LOGGER.info("Starting recording into file %s", fname)
             try:
                 self.__recorder = pj.AudioMediaRecorder()
                 self.__recorder.createRecorder(str(fname))
