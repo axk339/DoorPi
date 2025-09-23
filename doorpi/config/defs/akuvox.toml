@@ -1,0 +1,15 @@
+[config.akuvox.indfile]
+_description = "Where to store dnd status"
+_type = "path"
+_default = "/run/doorpi/web/akuvox.txt"
+
+[config.akuvox.ip]
+_description = "IP address of Akuvox monitor"
+_type = "string"
+_default = ""
+
+[config.akuvox.pwhash]
+_description = "Password hash, extract from browser communication at logon"
+_type = "string"
+_default = ""
+
