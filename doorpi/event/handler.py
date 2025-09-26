@@ -214,9 +214,9 @@ class EventHandler:
             except doorpi.event.AbortEventExecution:
                 LOGGER.info("[%s] Aborting event execution early")
                 break
-            except doorpi.event.SkipEventExecution:
-                LOGGER.info("[%s] Skipping next action of event", event_id)
-                skip_action = 1
+            except doorpi.event.SkipEventExecution as ex:
+                LOGGER.info("[%s] Skipping next %s action of event", event_id, ex.steps)
+                skip_action = ex.steps
             except Exception:  # pylint: disable=broad-except
                 try:
                     LOGGER.exception(

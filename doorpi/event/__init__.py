@@ -6,3 +6,5 @@ class AbortEventExecution(Exception):
 
 class SkipEventExecution(Exception):
     """Skipping executing of next action"""
+    def __init__(self, steps):
+        self.steps = steps
