@@ -91,20 +91,32 @@ class ConditionAction(Action):
 
     def __init__(self, matchtext: str, skip: str, path: str, filename: str) -> None:
         super().__init__()
-        self.__matchtext = matchtext
+        if matchtext.startswith("!"):
+            self.__matchtext = matchtext[1:]
+            self.__matchequal = False
+        else:
+            self.__matchtext = matchtext
+            self.__matchequal = True
         self.__skip = int(skip)
         self.__filepath = path + "/" + filename
         os.makedirs (path, exist_ok=True)
-        #not needed anymore
-        #uid = getpwnam("www-data").pw_uid
-        #gid = getpwnam("www-data").pw_gid
-        #os.chown(path, uid, gid)
+        if path.endswith("web"):
+            uid = getpwnam("www-data").pw_uid
+            gid = getpwnam("www-data").pw_gid
+            os.chown(path, uid, gid)
         
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
-        with open(self.__filepath) as f:
-            content = f.readline()
-        if (content == self.__matchtext):
-            raise doorpi.event.SkipEventExecution(self.__skip)
+        try:
+            with open(self.__filepath) as f:
+                content = f.readline()
+        except:
+            content = ""
+        if self.__matchequal:
+            if (content == self.__matchtext):
+                raise doorpi.event.SkipEventExecution(self.__skip)
+        else:
+            if (content != self.__matchtext):
+                raise doorpi.event.SkipEventExecution(self.__skip)
 
     def __str__(self) -> str:
         return f"Skip next {self.__skip} action if '{self.__matchtext}' in '{self.__filepath}'"
