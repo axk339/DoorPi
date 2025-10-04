@@ -78,6 +78,7 @@ class SkipAction(Action):
         self.__time = float(time)
 
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
+        LOGGER.info ("[" + event_id + "] last_finished " + str(extra["last_finished"]))
         if extra["last_finished"] != None:
             if ((time.time() - extra["last_finished"]) < self.__time):
                 raise doorpi.event.AbortEventExecution()
