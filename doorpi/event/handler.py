@@ -206,9 +206,9 @@ class EventHandler:
                     LOGGER.info("[%s] Skipping #%s %s", event_id, skip_action, action)
                     skip_action -= 1
                 else:
-                    #if not suppress_logs:
+                    if not suppress_logs:
                     #    LOGGER.debug("[%s] Executing %s", event_id, action)
-                    LOGGER.info("[%s] Executing %s", event_id, action)
+                        LOGGER.info("[%s] Executing %s", event_id, action)
                     action(event_id, extra)
                     if not suppress_logs:
                         self.log.log_action(event_id, str(action), start_time)
