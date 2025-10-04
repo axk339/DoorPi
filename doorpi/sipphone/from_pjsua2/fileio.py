@@ -55,11 +55,13 @@ class DialTonePlayer:
         self._player = noloopPlayer(self.stop)
         self._target = None
         self._level = loudness
-
+        self._player.adjustTxLevel(loudness)
+        
         ac_start = CallbackAction(self.start)
         ac_stop = CallbackAction(self.stop)
 
-        eh.register_action("OnCallOutgoing_S", ac_start)
+        #call start directly only once
+        #eh.register_action("OnCallOutgoing_S", ac_start)
         eh.register_action("OnCallConnect_S", ac_stop)
         #do not stop dialtone player for unansweted calls
         #eh.register_action("OnCallDisconnect_S", ac_stop)
@@ -74,6 +76,8 @@ class DialTonePlayer:
 
     def start(self) -> None:
         """Start playing the dial tone"""
+        LOGGER.info("Dial tone player start")
+            
         if self._player is None:
             LOGGER.error("Not playing dial tone due to previous errors")
             return
@@ -83,8 +87,9 @@ class DialTonePlayer:
                 pj.Endpoint.instance().audDevManager().getPlaybackDevMedia()
             )
         #adding loudness adjustment ... should be read from conf file
-        self._player.adjustTxLevel(0.05)   
         self._player.startTransmit(self._target)
+        #always restart from beginning / ok as triggered explicitly with 'call:dialtone' / allows restart of dialtone at every button press
+        self._player.setPos(0)
 
     def stop(self) -> None:
         """Stop the dial tone"""

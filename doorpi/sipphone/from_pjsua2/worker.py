@@ -187,19 +187,24 @@ class Worker:
 
         with self.__phone._call_lock:
             for uri in self.__phone._waiting_calls:
-                for ringing in self.__phone._ringing_calls:
-                    ci = ringing.getInfo()
-                    if ci.remoteUri == uri:
-                        break
+                if uri == "dialtone":
+                    LOGGER.info("Launching dialtone %s", uri)
+                    self.__phone.dialtone.start()
                 else:
-                    LOGGER.info("Calling %s", uri)
-                    fire_event("OnCallOutgoing", remote_uri=uri)
-                    call = CallCallback(self.__account)
-                    callprm = pj.CallOpParam(True)
-                    try:
-                        call.makeCall(uri, callprm)
-                    except pj.Error as err:
-                        LOGGER.error("Error making a call: %s", err.info())
+                    for ringing in self.__phone._ringing_calls:
+                        ci = ringing.getInfo()
+                        if ci.remoteUri == uri:
+                            LOGGER.info("Already calling %s", uri)
+                            break
                     else:
-                        self.__phone._ringing_calls += [call]
+                        LOGGER.info("Calling %s", uri)
+                        fire_event("OnCallOutgoing", remote_uri=uri)
+                        call = CallCallback(self.__account)
+                        callprm = pj.CallOpParam(True)
+                        try:
+                            call.makeCall(uri, callprm)
+                        except pj.Error as err:
+                            LOGGER.error("Error making a call: %s", err.info())
+                        else:
+                            self.__phone._ringing_calls += [call]
             self.__phone._waiting_calls = []

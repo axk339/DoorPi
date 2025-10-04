@@ -96,7 +96,10 @@ class Pjsua2(AbstractSIPPhone):
 
     def call(self, uri: str) -> bool:
         try:
-            canonical_uri = self.canonicalize_uri(uri)
+            if uri == "dialtone":    # allow 'dialtone' uri to trigger dialtone manually
+                canonical_uri = uri
+            else:
+                canonical_uri = self.canonicalize_uri(uri)
         except ValueError:
             return False
         LOGGER.trace(
@@ -107,10 +110,11 @@ class Pjsua2(AbstractSIPPhone):
             if self.current_call is not None:
                 # Another call is already active
                 return False
-
+            
             # Dispatch creation of the call to the main thread
             if canonical_uri not in self._waiting_calls:
                 self._waiting_calls.append(canonical_uri)
+            
             return True
 
     def dump_call(self) -> dict:
