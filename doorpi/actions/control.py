@@ -5,6 +5,7 @@ import time
 from typing import Any, Mapping
 import os
 from pwd import getpwnam
+import logging
 
 import doorpi.actions
 import doorpi.event
