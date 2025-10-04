@@ -50,12 +50,13 @@ class DialTonePlayer:
             )
             filename = ctx.__enter__()  # pylint: disable=no-member
 
+        LOGGER.info("dial tone player loudness: %s", loudness)
+          
         #play dialtone once and automatically stop at end of file
         #self._player = pj.AudioMediaPlayer()
         self._player = noloopPlayer(self.stop)
         self._target = None
         self._level = loudness
-        self._player.adjustTxLevel(loudness)
         
         ac_start = CallbackAction(self.start)
         ac_stop = CallbackAction(self.stop)
@@ -86,7 +87,8 @@ class DialTonePlayer:
             self._target = (
                 pj.Endpoint.instance().audDevManager().getPlaybackDevMedia()
             )
-        #adding loudness adjustment ... should be read from conf file
+        #adding loudness adjustment
+        self._player.adjustTxLevel(self._level)
         self._player.startTransmit(self._target)
         #always restart from beginning / ok as triggered explicitly with 'call:dialtone' / allows restart of dialtone at every button press
         self._player.setPos(0)
