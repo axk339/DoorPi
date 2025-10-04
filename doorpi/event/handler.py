@@ -206,8 +206,9 @@ class EventHandler:
                     LOGGER.info("[%s] Skipping #%s %s", event_id, skip_action, action)
                     skip_action -= 1
                 else:
-                    if not suppress_logs:
-                        LOGGER.debug("[%s] Executing %s", event_id, action)
+                    #if not suppress_logs:
+                    #    LOGGER.debug("[%s] Executing %s", event_id, action)
+                    LOGGER.info("[%s] Executing %s", event_id, action)
                     action(event_id, extra)
                     if not suppress_logs:
                         self.log.log_action(event_id, str(action), start_time)
@@ -215,7 +216,7 @@ class EventHandler:
                 LOGGER.info("[%s] Aborting event execution early")
                 break
             except doorpi.event.SkipEventExecution as ex:
-                LOGGER.info("[%s] Skipping next %s action of event", event_id, ex.steps)
+                LOGGER.debug("[%s] Skipping next %s action of event", event_id, ex.steps)
                 skip_action = ex.steps
             except Exception:  # pylint: disable=broad-except
                 try:

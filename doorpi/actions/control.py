@@ -11,6 +11,8 @@ import doorpi.event
 
 from . import Action
 
+LOGGER = logging.getLogger(__name__)
+
 
 class SleepAction(Action):
     """Delays event execution."""
@@ -98,6 +100,7 @@ class ConditionAction(Action):
             self.__matchtext = matchtext
             self.__matchequal = True
         self.__skip = int(skip)
+        self.__filename = filename
         self.__filepath = path + "/" + filename
         os.makedirs (path, exist_ok=True)
         if path.endswith("web"):
@@ -113,9 +116,11 @@ class ConditionAction(Action):
             content = ""
         if self.__matchequal:
             if (content == self.__matchtext):
+                LOGGER.info ("[" + event_id + "] Found '" + self.__matchtext + "' in " + self.__filename + ", skipping next " + str(self.__skip) + " actions")
                 raise doorpi.event.SkipEventExecution(self.__skip)
         else:
             if (content != self.__matchtext):
+                LOGGER.info ("[" + event_id + "] Found not '" + self.__matchtext + "' in " + self.__filename + ", skipping next " + str(self.__skip) + " actions")
                 raise doorpi.event.SkipEventExecution(self.__skip)
 
     def __str__(self) -> str:
