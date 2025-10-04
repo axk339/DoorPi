@@ -26,14 +26,12 @@ class HTTPRequestAction(Action):
             raise ValueError(f"Invalid scheme: {url.scheme}")
 
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
-        resp = requests.get(self.__url)
-        LOGGER.info(
-            "[%s] Server response: %d %s",
-            event_id,
-            resp.status_code,
-            resp.reason,
-        )
-
+        try:
+            resp = requests.get(self.__url, timeout=2)
+            LOGGER.info("[%s] Server response: %d %s", event_id, resp.status_code, resp.reason)
+        except requests.exceptions.Timeout:
+            LOGGER.warning("[%s] Server request timed out", event_id)
+        
     def __str__(self) -> str:
         return f"HTTP Request to {self.__url}"
 

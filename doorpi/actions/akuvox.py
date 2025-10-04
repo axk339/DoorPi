@@ -34,7 +34,7 @@ def akuvoxDND (force, dnd_mute):
 		### manage login ###
 		
 		postdata = '{"target":"login","action":"set","data":{"password":"' + akuvoxPasswordHash + '"},"session":"","web":"1"}'
-		response = requests.post(url, data=postdata)
+		response = requests.post(url, data=postdata, timeout=2)
 		response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 		
 		start_index = response.text.find("encrypt") + 11
@@ -42,7 +42,7 @@ def akuvoxDND (force, dnd_mute):
 		encrypt = response.text[start_index:end_index]
 		
 		postdata = '{"target":"login","action":"login","data":{"userName":"admin","password":"' + encrypt + '"},"session":"","web":"1"}'
-		response = requests.post(url, data=postdata)
+		response = requests.post(url, data=postdata, timeout=2)
 		response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 		
 		start_index = response.text.find("token") + 9
@@ -53,7 +53,7 @@ def akuvoxDND (force, dnd_mute):
 		
 		if getdnd:
 			postdata = '{"target":"config","action":"info","configData":{"item":["WholeDay&24&61"]},"session":"' + token + '","web":"1"}';
-			response = requests.post(url, data=postdata)
+			response = requests.post(url, data=postdata, timeout=2)
 			response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 			
 			## parse dnd status (..."WholeDay": "1"...)
@@ -80,7 +80,7 @@ def akuvoxDND (force, dnd_mute):
 		
 		if setdnd:
 			postdata = '{"target":"config","action":"edit","configData":{"item":["' + ('1' if dnd_mute else '0') + '&24&61"]},"session":"' + token + '","web":"1"}'
-			response = requests.post(url, data=postdata)
+			response = requests.post(url, data=postdata, timeout=2)
 			response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 			
 			if dnd_mute:
@@ -100,7 +100,7 @@ def akuvoxDND (force, dnd_mute):
 			
 			#{"target":"config","action":"info","configData":{"item":["RingVolume&26&266","TalkVolume&26&272","MicVolume&26&273","TouchSoundEnable&26&1561","ringtoneSoundFile&26&224","SelectRingtoneSoundFile&26&2432"]},"session":"E4D37207","web":"1"}
 			postdata = '{"target":"config","action":"info","configData":{"item":["RingVolume&26&266"]},"session":"' + token + '","web":"1"}'
-			response = requests.post(url, data=postdata)
+			response = requests.post(url, data=postdata, timeout=2)
 			response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 			
 			# parse dnd status (..."RingVolume": "10"...)
@@ -122,11 +122,14 @@ def akuvoxDND (force, dnd_mute):
 			if vol_level > 15: vol_level = 15
 			
 			postdata = '{"target":"config","action":"edit","configData":{"item":["' + str(vol_level) + '&26&266"]},"session":"' + token + '","web":"1"}'
-			response = requests.post(url, data=postdata)
+			response = requests.post(url, data=postdata, timeout=2)
 			response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 			
 			LOGGER.info ("# new volume: " + str(vol_level))
-		
+	
+	except requests.exceptions.Timeout:
+		LOGGER.warning("Akuvox monitor request timed out")
+	
 	except requests.exceptions.RequestException as e:
 		LOGGER.error (f"An error occurred: {e}")
 
