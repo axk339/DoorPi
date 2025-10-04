@@ -111,10 +111,12 @@ class CallCallback(pj.Call):
             self.__call_answered = True
             with sp._call_lock:
                 prm = pj.CallOpParam()
+                #akx - incoming call set above in AccountCallback already as current_call, gets hungup with beliw check!
                 if sp.current_call is not None:
-                    # (note: this should not be possible)
-                    sp.current_call.hangup(prm)
-                    sp.current_call = None
+                    LOGGER.info("Current call in PJSIP_INV_STATE_CONFIRMED: %r", sp.current_call.getInfo().remoteUri)
+                #    # (note: this should not be possible)
+                #    sp.current_call.hangup(prm)
+                #    sp.current_call = None
 
                 sp.current_call = self
                 for ring in sp._ringing_calls:
