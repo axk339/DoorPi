@@ -64,17 +64,17 @@ def akuvoxDND (force, dnd_mute):
 			if dndstatus == "0":
 				if setdnd and not dnd_mute:
 					setdnd = False
-					LOGGER.info ("# skipping force unmute, not needed")
+					LOGGER.debug ("# skipping force unmute, not needed")
 				with open(indfile, "w") as f:
 					f.write("unmute")
-				LOGGER.info ("# stored status 'unmute' in " + str(indfile))
+				LOGGER.debug ("# stored status 'unmute' in " + str(indfile))
 			else:
 				if setdnd and dnd_mute:
 					setdnd = False
-					LOGGER.info ("# skipping force mute, not needed")
+					LOGGER.debug ("# skipping force mute, not needed")
 				with open(indfile, "w") as f:
 					f.write("mute")
-				LOGGER.info ("# stored status 'mute' in " + str(indfile))
+				LOGGER.debug ("# stored status 'mute' in " + str(indfile))
 		
 		### set dnd status, both in local file and on ip phone
 		
@@ -86,13 +86,13 @@ def akuvoxDND (force, dnd_mute):
 			if dnd_mute:
 				with open(indfile, "w") as f:
 					f.write("mute")
-				LOGGER.info ("# stored status 'mute' in " + str(indfile))
+				LOGGER.debug ("# stored status 'mute' in " + str(indfile))
 			else:
 				with open(indfile, "w") as f:
 					f.write("unmute")
-				LOGGER.info ("# stored status 'unmute' in " + str(indfile))
+				LOGGER.debug ("# stored status 'unmute' in " + str(indfile))
 			
-			LOGGER.info ("# new dnd status: " + ('1' if dnd_mute else '0'))
+			LOGGER.debug ("# new dnd status: " + ('1' if dnd_mute else '0'))
 		
 		### get current ring volume
 		
@@ -110,9 +110,9 @@ def akuvoxDND (force, dnd_mute):
 			
 			if setvol and vol_level == volstatus:
 				setvol = False
-				LOGGER.info ("# skipping force volume, not needed")
+				LOGGER.debug ("# skipping force volume, not needed")
 			
-			LOGGER.info ("# volume: " + str(volstatus))
+			LOGGER.debug ("# volume: " + str(volstatus))
 		
 		### set volume to defined value (0..15, by default always 10)
 		
@@ -125,7 +125,7 @@ def akuvoxDND (force, dnd_mute):
 			response = requests.post(url, data=postdata, timeout=2)
 			response.raise_for_status() # This will raise an HTTPError for bad responses (4xx or 5xx)
 			
-			LOGGER.info ("# new volume: " + str(vol_level))
+			LOGGER.debug ("# new volume: " + str(vol_level) + ", was " + str(volstatus))
 	
 	except requests.exceptions.Timeout:
 		LOGGER.warning("Akuvox monitor request timed out")
