@@ -289,8 +289,12 @@ def setup_audio_echo_cancellation(adm: pj.AudDevManager) -> None:
     """Sets up echo cancellation in PJSUA2."""
     if doorpi.INSTANCE.config["sipphone.echo_cancellation.enabled"]:
         tail = doorpi.INSTANCE.config["sipphone.echo_cancellation.tail"]
-        LOGGER.trace("Setting software echo cancellation tail length to %dms", tail)
-        adm.setEcOptions(tail, 0)
+        LOGGER.info("Setting software echo cancellation tail length to %dms", tail)
+        #- setEcOptions > https://docs.pjsip.org/en/2.10/pjsua2/media.html#device-manager
+        #- setEcOptions / options > pjmedia_echo_create> https://docs.pjsip.org/en/2.10/api/generated/pjmedia/group/group__PJMEDIA__Echo__Cancel.html#group__PJMEDIA__Echo__Cancel_1ga6b2a27be70d96eb16fac66f19b6913d3
+        #- pjmedia_echo_create / options > pjmedia_echo_cancel > https://docs.pjsip.org/en/2.10/api/generated/pjmedia/group/group__PJMEDIA__Echo__Cancel.html#group__PJMEDIA__Echo__Cancel_1gaa92df3d6726a21598e25bf5d4a23897e
+        #- pjmedia_echo_cancel / AEC3 > https://github.com/pjsip/pjproject/pull/2722
+        adm.setEcOptions(tail, pj.PJMEDIA_ECHO_WEBRTC_AEC3)
     else:
         LOGGER.trace("Disabling software echo cancellation")
         adm.setEcOptions(0, 0)

@@ -9,7 +9,7 @@ import pjsua2 as pj
 
 import doorpi
 
-from . import fire_event
+from . import fire_event, config
 
 if TYPE_CHECKING:
     from . import glue
@@ -179,11 +179,7 @@ class CallCallback(pj.Call):
         #     self.vidSetStream(pj.PJSUA_CALL_VID_STRM_ADD, __params)
         if audio:
             #adding echo cancellation
-            #- setEcOptions > https://docs.pjsip.org/en/2.10/pjsua2/media.html#device-manager
-            #- setEcOptions / options > pjmedia_echo_create> https://docs.pjsip.org/en/2.10/api/generated/pjmedia/group/group__PJMEDIA__Echo__Cancel.html#group__PJMEDIA__Echo__Cancel_1ga6b2a27be70d96eb16fac66f19b6913d3
-            #- pjmedia_echo_create / options > pjmedia_echo_cancel > https://docs.pjsip.org/en/2.10/api/generated/pjmedia/group/group__PJMEDIA__Echo__Cancel.html#group__PJMEDIA__Echo__Cancel_1gaa92df3d6726a21598e25bf5d4a23897e
-            #- pjmedia_echo_cancel / AEC3 > https://github.com/pjsip/pjproject/pull/2722
-            adm.setEcOptions(100, pj.PJMEDIA_ECHO_WEBRTC_AEC3)
+            config.setup_audio_echo_cancellation(adm)
             # Connect call audio to speaker and microphone
             audio.startTransmit(adm.getPlaybackDevMedia())
             adm.getCaptureDevMedia().startTransmit(audio)
