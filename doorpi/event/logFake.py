@@ -37,7 +37,7 @@ class EventLog:
         extra: Optional[Mapping[str, Any]],
     ) -> None:
         LOGGER.trace ("skipping log_event")
-        LOGGER.info ("##EVENT## ["+event_id+"] "+source+" >> "+event)
+        LOGGER.info ("["+event_id+"] ##EVENT## "+source+" >> "+event)
 
     def log_action(
         self, event_id: str, action_name: str, start_time: float

@@ -179,6 +179,7 @@ class EventHandler:
         extra.update(
             {
                 "last_fired": str(start_time),
+                "last_fired_dt": start_time,
                 "source": source,
                 "event_id": event_id,
             }
@@ -188,6 +189,7 @@ class EventHandler:
         last_info = self.extra_info.get(event, {})
         for key in ["last_finished", "last_duration"]:
             extra[key] = last_info.get(key, None)
+        extra["prev_fired_dt"] = last_info.get("last_fired_dt", None)
         self.extra_info[event] = extra
 
         if not suppress_logs:
@@ -212,7 +214,7 @@ class EventHandler:
                     if not suppress_logs:
                         self.log.log_action(event_id, str(action), start_time)
             except doorpi.event.AbortEventExecution:
-                LOGGER.info("[%s] Aborting event execution early")
+                LOGGER.info("[%s] Aborting event execution early", event_id)
                 break
             except doorpi.event.SkipEventExecution as ex:
                 LOGGER.debug("[%s] Skipping next %s action of event", event_id, ex.steps)
@@ -234,11 +236,16 @@ class EventHandler:
         for action in oneshot_actions:
             self.actions[event].remove(action)
 
+        duration = time.time() - start_time
         if not suppress_logs:
-            LOGGER.debug("[%s] Finished firing event %s", event_id, event)
+            LOGGER.info("[%s] ##FINISHED## event %s, duration %sms", event_id, event, str(round(duration*10000)/10))
 
-        self.extra_info[event]["last_finished"] = time.time()
-        self.extra_info[event]["last_duration"] = time.time() - start_time
+        if self.extra_info[event]["event_id"] == event_id:
+            self.extra_info[event]["last_finished"] = time.time()
+            self.extra_info[event]["last_duration"] = duration
+        else:
+            if not suppress_logs:
+                LOGGER.info("[%s] Skipping update of last_finished, already next event [%s] in extra_info", event_id, self.extra_info[event]["event_id"])
 
     def _unregister_event(self, event: str, source: str) -> bool:
         suppress_logs = _suppress_logs(event)
