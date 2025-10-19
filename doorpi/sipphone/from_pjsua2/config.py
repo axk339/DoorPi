@@ -353,6 +353,8 @@ class DoorPiLogWriter(pj.LogWriter):
             self.__logger.error("%s", entry.msg)
         elif entry.level <= 2:
             self.__logger.warning("%s", entry.msg)
+        elif "registration success, status=200" in entry.msg:
+            self.__logger.debug("%s", entry.msg)
         elif "Call time: 00h:00m:00s" in entry.msg:
             self.__logger.debug("%s", entry.msg)
         elif entry.level <= 3:

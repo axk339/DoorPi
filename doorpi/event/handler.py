@@ -238,7 +238,7 @@ class EventHandler:
 
         duration = time.time() - start_time
         if not suppress_logs:
-            LOGGER.info("[%s] ##FINISHED## event %s, duration %sms", event_id, event, str(round(duration*10000)/10))
+            LOGGER.debug("[%s] ##FINISHED## event %s, duration %sms", event_id, event, str(round(duration*10000)/10))
 
         if self.extra_info[event]["event_id"] == event_id:
             self.extra_info[event]["last_finished"] = time.time()
