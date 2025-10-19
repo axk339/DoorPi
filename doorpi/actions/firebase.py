@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 firebaseInit = False
 def firebase_init():
     global firebaseInit
-    LOGGER.info ("Firebase init firebaseInit=" + str(firebaseInit))
+    LOGGER.debug ("Firebase init firebaseInit=" + str(firebaseInit))
     if (not firebaseInit):
         try:
             firebaseInit = True
