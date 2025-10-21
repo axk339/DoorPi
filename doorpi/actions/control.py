@@ -101,7 +101,13 @@ class ConditionAction(Action):
         else:
             self.__matchtext = matchtext
             self.__matchequal = True
-        self.__skip = int(skip)
+        if skip.startswith("#"):
+            self.__skip = int(skip[1:])
+            self.__chkchange = True
+        else:
+            self.__skip = int(skip)
+            self.__chkchange = False
+        self.__contentlast = ""
         self.__filename = filename
         self.__filepath = path + "/" + filename
         os.makedirs (path, exist_ok=True)
@@ -116,15 +122,37 @@ class ConditionAction(Action):
                 content = f.readline()
         except:
             content = ""
+        # check conditon
         if self.__matchequal:
-            if (content == self.__matchtext):
-                LOGGER.debug ("[" + event_id + "] Found '" + self.__matchtext + "' in " + self.__filename + ", skipping next " + str(self.__skip) + " actions")
-                raise doorpi.event.SkipEventExecution(self.__skip)
+            # execute next commands if text found, skip otherwise
+            chk = (content == self.__matchtext)
+            text = "found"
         else:
-            if (content != self.__matchtext):
-                LOGGER.debug ("[" + event_id + "] Found not '" + self.__matchtext + "' in " + self.__filename + ", skipping next " + str(self.__skip) + " actions")
-                raise doorpi.event.SkipEventExecution(self.__skip)
-
+            # execute next commands if text not found, skip otherwise
+            chk = (content != self.__matchtext)
+            text = "not found"
+        # use conditon
+        if chk:
+            # check change
+            if self.__chkchange:
+                # execute next if change
+                if self.__contentlast != content:
+                    self.__contentlast = content
+                    LOGGER.debug ("[" + event_id + "] '" + self.__matchtext + "' "+text+" first time in " + self.__filename + ", not skipping next " + str(self.__skip) + " actions")
+                # skip next if change
+                else:
+                    LOGGER.debug ("[" + event_id + "] '" + self.__matchtext + "' "+text+" several times in " + self.__filename + ", skipping next " + str(self.__skip) + " actions")
+                    raise doorpi.event.SkipEventExecution(self.__skip)
+            # always execute if not checking change
+            else:
+                self.__contentlast = content
+                LOGGER.debug ("[" + event_id + "] '" + self.__matchtext + "' "+text+" in " + self.__filename + ", not skipping next " + str(self.__skip) + " actions")
+        # always skip if not found
+        else:
+            self.__contentlast = content
+            LOGGER.debug ("[" + event_id + "] '" + self.__matchtext + "' not "+text+" in " + self.__filename + ", skipping next " + str(self.__skip) + " actions")
+            raise doorpi.event.SkipEventExecution(self.__skip)
+    
     def __str__(self) -> str:
         return f"Skip next {self.__skip} action if '{self.__matchtext}' in '{self.__filepath}'"
 
