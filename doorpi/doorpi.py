@@ -288,20 +288,21 @@ class DoorPi:
 
             if duration > tickrate:
                 skipped_ticks, duration = divmod(duration, tickrate)
-                LOGGER.warning(
-                    "Tick took too long (%.1fms > %.1fms), skipping %d tick(s)",
-                    duration * 1000,
-                    tickrate * 1000,
-                    skipped_ticks,
-                )
-                LOGGER.warning(
-                    "registered actions for OnTimeRapidTick: %s",
-                    self.event_handler.actions["OnTimeRapidTick"],
-                )
-                LOGGER.warning(
-                    "registered actions for OnTimeTick: %s",
-                    self.event_handler.actions["OnTimeTick"],
-                )
+                if skipped_ticks > 10:
+                    LOGGER.warning(
+                        "Tick took too long (%.1fms > %.1fms), skipping %d tick(s)",
+                        duration * 1000,
+                        tickrate * 1000,
+                        skipped_ticks,
+                    )
+                    LOGGER.warning(
+                        "registered actions for OnTimeRapidTick: %s",
+                        self.event_handler.actions["OnTimeRapidTick"],
+                    )
+                    LOGGER.warning(
+                        "registered actions for OnTimeTick: %s",
+                        self.event_handler.actions["OnTimeTick"],
+                    )
                 last += skipped_ticks * tickrate
                 next_slowtick -= skipped_ticks
 
