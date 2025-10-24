@@ -106,7 +106,7 @@ class MailAction(Action):
                     filename=snapfile.name,
                 )
             except IndexError:
-                LOGGER.error("[%s] No snapshots to attach to email", event_id)
+                LOGGER.error("No snapshots to attach to email")
             except Exception:  # pylint: disable=broad-except
                 LOGGER.exception(
                     "[%s] Cannot attach snapshot to email", event_id
@@ -124,14 +124,13 @@ class MailAction(Action):
 
         except smtplib.SMTPException as err:
             LOGGER.error(
-                "[%s] Failed sending email to %s: %s: %s",
-                event_id,
+                "Failed sending email to %s: %s: %s",
                 self.__to,
                 type(err).__name__,
                 err,
             )
         else:
-            LOGGER.info("[%s] Sent email to %s", event_id, ', '.join(self.__to))
+            LOGGER.info("Sent email to %s", ', '.join(self.__to))
 
     def _start_session(self, smtp: smtplib.SMTP) -> None:
         if self.__starttls:

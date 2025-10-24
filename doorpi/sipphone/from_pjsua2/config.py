@@ -349,17 +349,18 @@ class DoorPiLogWriter(pj.LogWriter):
         self.__logger = logger
 
     def write(self, entry: pj.LogEntry) -> None:
-        if entry.level <= 1:
-            self.__logger.error("%s", entry.msg)
-        elif entry.level <= 2:
-            self.__logger.warning("%s", entry.msg)
-        elif "registration success, status=200" in entry.msg:
-            self.__logger.debug("%s", entry.msg)
-        elif "Call time: 00h:00m:00s" in entry.msg:
-            self.__logger.debug("%s", entry.msg)
-        elif entry.level <= 3:
-            self.__logger.info("%s", entry.msg)
-        elif entry.level <= 4:
-            self.__logger.debug("%s", entry.msg)
-        else:
-            self.__logger.trace("[level %d] %s", entry.level, entry.msg)
+        if len(entry.msg) > 1:  # suppress empty space ' ' messages
+            if entry.level <= 1:
+                self.__logger.error("%s", entry.msg)
+            elif entry.level <= 2:
+                self.__logger.warning("%s", entry.msg)
+            elif "registration success, status=200" in entry.msg:
+                self.__logger.debug("%s", entry.msg)
+            elif "Call time: 00h:00m:00s" in entry.msg:
+                self.__logger.debug("%s", entry.msg)
+            elif entry.level <= 3:
+                self.__logger.info("%s", entry.msg)
+            elif entry.level <= 4:
+                self.__logger.debug("%s", entry.msg)
+            else:
+                self.__logger.trace("[level %d] %s", entry.level, entry.msg)

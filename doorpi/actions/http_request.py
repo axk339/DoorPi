@@ -28,9 +28,9 @@ class HTTPRequestAction(Action):
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         try:
             resp = requests.get(self.__url, timeout=2)
-            LOGGER.info("[%s] Server response: %d %s", event_id, resp.status_code, resp.reason)
+            LOGGER.info("Request '%s': Server response: %d %s", self.__url, resp.status_code, resp.reason)
         except requests.exceptions.Timeout:
-            LOGGER.warning("[%s] Server request timed out", event_id)
+            LOGGER.warning("Request '%s': Server request timed out", self.__url)
         
     def __str__(self) -> str:
         return f"HTTP Request to {self.__url}"
