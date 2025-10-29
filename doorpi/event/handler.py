@@ -21,8 +21,8 @@ import doorpi.actions
 import doorpi.event
 
 #skip eventDB logging 
-#from . import log
-from . import logFake as log
+from . import log
+#from . import logFake as log
 
 LOGGER: doorpi.DoorPiLogger = logging.getLogger(__name__)  # type: ignore
 

@@ -36,7 +36,7 @@ async def run() -> None:
     app.add_routes(doorpi.web.api.routes)
     app.add_routes(doorpi.web.resources.routes)
     doorpi.web.auth.setup(app)
-    runner = aiohttp.web.AppRunner(app)
+    runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
 
     fds = int(os.environ.get("LISTEN_FDS", "0"))

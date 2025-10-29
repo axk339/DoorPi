@@ -7,6 +7,9 @@ import typing as T
 import aiohttp.web
 
 import doorpi
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def setup(app: aiohttp.web.Application) -> None:
@@ -116,6 +119,7 @@ def get_user_session(
     try:
         expected_passwd = request.app["doorpi_web_config"][("users", user)]
     except KeyError:
+        logger.info(f"webserver: UnknownUser {user}")
         doorpi.INSTANCE.event_handler.fire_event(
             "OnWebAuthUnknownUser",
             "doorpi.web",
@@ -123,6 +127,7 @@ def get_user_session(
         )
         return None
     if passwd != expected_passwd:
+        logger.info(f"webserver: WrongPassword for user {user}")
         doorpi.INSTANCE.event_handler.fire_event(
             "OnWebAuthWrongPassword",
             "doorpi.web",
@@ -138,6 +143,7 @@ def get_user_session(
     if session is None:
         session = create_session(user, request)
         request.app["doorpi_auth_sessions"][user] = session
+        logger.info(f"webserver: Login of user {user}")
         doorpi.INSTANCE.event_handler.fire_event(
             "OnWebAuthLogin",
             "doorpi.web",
