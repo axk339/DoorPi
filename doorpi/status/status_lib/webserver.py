@@ -12,11 +12,13 @@ def get(
     del value
     status_getters: Dict[str, Callable[[doorpi.web.DoorPiWeb], Any]] = {
         "config_status": lambda _: {"infos": [], "warnings": [], "errors": []},
-        "session_ids": lambda ws: list(ws.sessions.sessions),
-        "sessions": operator.attrgetter("sessions.sessions"),
+        #"session_ids": lambda ws: list(ws.sessions.sessions),
+        "session_ids": lambda ws: [],
+        #"sessions": operator.attrgetter("sessions.sessions"),
+        "sessions": lambda ws: [],
         "running": bool,
-        "server_name": operator.attrgetter("server_name"),
-        "server_port": operator.attrgetter("server_port"),
+        #"server_name": operator.attrgetter("server_name"),
+        #"server_port": operator.attrgetter("server_port"),
     }
     if not name:
         name = status_getters.keys()

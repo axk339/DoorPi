@@ -1,8 +1,9 @@
 [config.suntime.latitude]
 _description = "Latitude"
 _type = "float"
+_default = 0
 
 [config.suntime.longitude]
 _description = "Longitude"
 _type = "float"
-
+_default = 0
