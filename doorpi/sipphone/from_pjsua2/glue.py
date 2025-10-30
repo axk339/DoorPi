@@ -123,12 +123,18 @@ class Pjsua2(AbstractSIPPhone):
         cc = self.current_call
         if cc is not None:
             ci = cc.getInfo()
+            audio = None
+            for i in range(len(ci.media)):
+                if ci.media[i].type == pj.PJMEDIA_TYPE_AUDIO and audio is None:
+                    audio = cc.getAudioMedia(i)
             return {
                 "direction": (
                     "outgoing" if ci.role == pj.PJSIP_ROLE_UAC else "incoming"
                 ),
                 "remote_uri": ci.remoteUri,
-                "total_time": ci.connectDuration,
+                "total_time": ci.connectDuration.sec,
+                "level_incoming": audio.getRxLevel(),
+                "level_outgoing": audio.getTxLevel(),
                 "camera": False,
             }
         return {}

@@ -238,7 +238,17 @@ class ComplexJSONEncoder(json.JSONEncoder):
             return obj.name
         elif isinstance(obj, pathlib.PosixPath):
             return str(obj)
-        return super().default(obj)
-
+        #return super().default(obj)
+        
+        # 👇 TEMPORARY WORKAROUND to handle any unexpected custom object (like TimeVal)
+        try:
+            # First, attempt to use the standard default conversion (if possible)
+            return super().default(obj)
+        except TypeError:
+            # If the standard conversion fails, convert the object to its string representation
+            # This is a safe way to ensure serialization for most custom types.
+            return str(obj)
 
 json_encoder = ComplexJSONEncoder()
+
+

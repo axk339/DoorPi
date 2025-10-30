@@ -52,6 +52,7 @@ class DoorPiStatus:
                 LOGGER.warning("Skipping unknown status module %s", module)
                 continue
             try:
+                #LOGGER.info("Getting status module %s", module)
                 getter_func = importlib.import_module(
                     f"doorpi.status.status_lib.{module}"
                 ).get  # type: ignore
