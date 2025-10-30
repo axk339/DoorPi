@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 import re
 import typing as T
+import base64
 
 import aiohttp.web
 
@@ -61,7 +62,7 @@ def is_public_resource(request: aiohttp.web.Request) -> bool:
     if request.method != "GET":
         return False
     for res in request.app["doorpi_web_config"]["areas.public"]:
-        if re.match(res, request.path):
+        if res != "" and re.match(res, request.path):
             return True
     return False
 
@@ -73,7 +74,7 @@ def is_user_authorized(request: aiohttp.web.Request) -> bool:
         return False
 
     if request.method == "GET":
-        accessible = session.readable | session.readable
+        accessible = session.writable | session.readable
     else:
         accessible = session.writable
 
@@ -84,10 +85,11 @@ def is_user_authorized(request: aiohttp.web.Request) -> bool:
             area_res = cfg["areas", area]
         except KeyError:
             continue
-
-        for area_re in area_res:
-            if re.fullmatch(area_re, request.path):
-                return True
+        
+        #for area_re in area_res:
+        #    logger.info(f"webserver: area_re {str(area_re)}")
+        if re.fullmatch(area_res, request.path):
+            return True
     return False
 
 
@@ -102,18 +104,27 @@ def get_user_session(
         auth = request.headers["Authorization"]
     except KeyError:
         return None
-
+    
     if not auth.startswith("Basic "):
         raise aiohttp.web.HTTPBadRequest()
 
     try:
-        user, passwd = (
-            auth[len("Basic ") :]
-            .encode("ascii")
-            .decode("base64")
-            .split(":", 1)
-        )
-    except Exception:
+        #user, passwd = (
+        #    auth[len("Basic ") :]
+        #    .encode("ascii")
+        #    .decode("base64")
+        #    .split(":", 1)
+        #)
+        # 1. Slice off 'Basic '
+        auth_bytes = auth[len("Basic ") :].encode("ascii")
+        # 2. Decode the Base64 bytes using base64.b64decode()
+        decoded_bytes = base64.b64decode(auth_bytes)
+        # 3. Convert the resulting bytes to a string (e.g., using 'utf-8')
+        decoded_str = decoded_bytes.decode("utf-8")
+        # 4. Split the username and password
+        user, passwd = decoded_str.split(":", 1)
+    except Exception as e:
+        logger.info(f"webserver: auth '{str(e)}'")
         raise aiohttp.web.HTTPBadRequest() from None
 
     try:
@@ -154,22 +165,26 @@ def get_user_session(
 
 def create_session(username: str, request: aiohttp.web.Request) -> Session:
     """Create a new session for ``username``"""
-    cfg = request.app["doorpi_web_conf"]
+    cfg = request.app["doorpi_web_config"]
     usergroups = frozenset(
         group
         for group, users in cfg.view("groups").items()
         if username in users
     )
+    logger.debug(f"webserver: usergroups {str(usergroups)}")
     readable = frozenset(
         area
         for area, groups in cfg.view("readaccess").items()
-        if usergroups & groups
+        if usergroups & set(groups)
     )
+    logger.debug(f"webserver: readable {str(readable)}")
     writable = frozenset(
         area
         for area, groups in cfg.view("writeaccess").items()
-        if usergroups & groups
+        if usergroups & set(groups)
     )
+    logger.debug(f"webserver: writable {str(writable)}")
+    logger.debug(f"webserver: Session created for '{username}'")
     return Session(
         username,
         usergroups,
