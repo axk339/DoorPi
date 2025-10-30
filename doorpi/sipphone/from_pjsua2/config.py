@@ -78,10 +78,15 @@ def dialtone_config() -> dict:
     filename = doorpi.INSTANCE.config["sipphone.dialtone.file"]
     if filename.is_dir():  # default = PosixPath(".")
         filename = None
+    
+    view = doorpi.INSTANCE.config.view("sipphone.dialtone.easteregg")
+    # Iterate over keys, and look up the value for each key
+    easteregg = {key: view[key] for key in view}
 
     return {
         "filename": filename,
         "loudness": doorpi.INSTANCE.config["sipphone.dialtone.loudness"],
+        "easteregg": easteregg
     }
 
 

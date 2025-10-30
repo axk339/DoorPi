@@ -188,7 +188,7 @@ class Worker:
         with self.__phone._call_lock:
             for uri in self.__phone._waiting_calls:
                 if uri == "dialtone":
-                    LOGGER.info("Launching dialtone %s", uri)
+                    LOGGER.info("Launching uri '%s'", uri)
                     self.__phone.dialtone.start()
                 else:
                     for ringing in self.__phone._ringing_calls:

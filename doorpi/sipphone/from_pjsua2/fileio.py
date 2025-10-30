@@ -30,13 +30,16 @@ class noloopPlayer (pj.AudioMediaPlayer):
 class DialTonePlayer:
     """Plays the dial tone while dialing."""
 
-    __slots__ = ("_level", "_player", "_target")
+    __slots__ = ("_level", "_player", "_target", "_filename", "_easteregg", "_ee_mode")
     _player: Optional[pj.AudioMediaPlayer]
     _target: Optional[pj.AudioMedia]
     _level: float
+    _filename: str
+    _easteregg: dict
+    _ee_mode: int
 
     def __init__(
-        self, filename: Union[str, pathlib.Path, None], loudness: float
+        self, filename: Union[str, pathlib.Path, None], loudness: float, easteregg: dict
     ) -> None:
         eh = doorpi.INSTANCE.event_handler
 
@@ -49,12 +52,14 @@ class DialTonePlayer:
                 ),
             )
             filename = ctx.__enter__()  # pylint: disable=no-member
-
-        LOGGER.info("dial tone player loudness: %s", loudness)
+        self._filename = filename
+        
+        LOGGER.info("Dial tone player loudness: %s", loudness)
           
         #play dialtone once and automatically stop at end of file
         #self._player = pj.AudioMediaPlayer()
-        self._player = noloopPlayer(self.stop)
+        #moved below into initPlayer
+        #self._player = noloopPlayer(self.stop)
         self._target = None
         self._level = loudness
         
@@ -67,18 +72,27 @@ class DialTonePlayer:
         #do not stop dialtone player for unansweted calls
         #eh.register_action("OnCallDisconnect_S", ac_stop)
         #eh.register_action("OnCallUnanswered_S", ac_stop)
-
-        try:
-            #adding PJMEDIA_FILE_NO_LOOP attribute... should be read from conf file
-            self._player.createPlayer(str(filename), pj.PJMEDIA_FILE_NO_LOOP) 
-        except pj.Error as err:
-            LOGGER.error("Unable to create dial tone player: %s", err.info())
-            self._player = None
+        
+        #not needed anymore, done below in initPlayer
+        #try:
+        #    #adding PJMEDIA_FILE_NO_LOOP attribute... should be read from conf file
+        #    self._player.createPlayer(str(filename), pj.PJMEDIA_FILE_NO_LOOP) 
+        #except pj.Error as err:
+        #    LOGGER.error("Unable to create dial tone player: %s", err.info())
+        #    self._player = None
+        
+        #adapt dialtone according to special days
+        self._easteregg = easteregg
+        self._ee_mode = -1
+        if (len(easteregg) > 0):
+            for egg in easteregg:
+                LOGGER.info("Dial tone player easteregg: Registered '%s'", egg)
 
     def start(self) -> None:
         """Start playing the dial tone"""
         LOGGER.info("Dial tone player start")
-            
+        self.initPlayer()
+        
         if self._player is None:
             LOGGER.error("Not playing dial tone due to previous errors")
             return
@@ -101,6 +115,38 @@ class DialTonePlayer:
         self._player.stopTransmit(self._target)
         self._player.setPos(0)
         self._target = None
+    
+    def initPlayer(self) -> None:
+        LOGGER.debug("Dial tone player easteregg: Checking...")
+        today = datetime.date.today()
+        filename = self._filename
+        switch = False
+        #check first if there is a special mode to be ended
+        if self._ee_mode > 0:
+            if self._ee_mode == 1:  #halloween
+                if not (today.month == 10 and today.day == 31):
+                    self._ee_mode = 0
+                    LOGGER.info("Dial tone player easteregg: Switching back to normal mode")
+                    switch = True
+        #check if new special mode needed
+        for egg in self._easteregg:
+            if egg.lower() == "halloween":
+                if (today.month == 10 and today.day == 31): # or self._ee_mode < 0: #only for test, activates always at startup
+                    LOGGER.info("Dial tone player easteregg: Switching to halloween mode")
+                    self._ee_mode = 1
+                    filename = self._easteregg[egg]
+                    LOGGER.debug("Dial tone player easteregg: File %s", filename)
+                    switch = True
+        #create new dialtone player, if no player (=at init, or when special mode switch)
+        if self._ee_mode < 0 or switch:
+            if self._ee_mode < 0:
+                self._ee_mode = 0
+            self._player = noloopPlayer(self.stop)
+            try:
+                self._player.createPlayer(str(filename), pj.PJMEDIA_FILE_NO_LOOP) 
+            except pj.Error as err:
+                LOGGER.error("Unable to create dial tone player: %s", err.info())
+                self._player = None
 
 
 class CallRecorder:
