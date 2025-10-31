@@ -23,6 +23,7 @@ import doorpi.event
 #skip eventDB logging 
 from . import log
 #from . import logFake as log
+from doorpi.actions import CallbackAction
 
 LOGGER: doorpi.DoorPiLogger = logging.getLogger(__name__)  # type: ignore
 
@@ -71,6 +72,10 @@ class EventHandler:
             for action in actions:
                 LOGGER.debug("Registering action %r for DTMF %r", action, seq)
                 self.register_action(f"OnDTMF_{seq}", action)
+        
+        # register eventlog cleanup
+        ac_clean = CallbackAction(self.log.clean)
+        self.register_action("OnTimeHour", ac_clean)
 
     def destroy(self) -> None:
         """Shut down the event handler"""
@@ -343,4 +348,4 @@ class EventHandler:
 
 
 def _suppress_logs(event_name: str) -> bool:
-    return "OnTime" in event_name
+    return ("OnTime" in event_name) or ("OnCallOutgoing" in event_name) or ("_S" in event_name)

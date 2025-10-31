@@ -2,6 +2,7 @@
 {% block content %}
 			<script>
 				$(document).ready(function() {
+                   
 					$.getJSON("/status?output=json.parsed", function(result){
 						var actionCount = 0;
 						$.each(result.event_handler.actions, function(sEventName, aActionList) {
@@ -27,7 +28,66 @@
 								"&darr; "+result.sipphone.current_call.level_outgoing.toFixed(2)+")"
 							);
 						}
-
+                        
+                        oConfigObject = result.history_event;
+                        var aReturnArray = new Array();
+                        $.each(oConfigObject, function(seqNo, event) {
+                            aReturnArray.push({
+                                seq: seqNo,
+                                event_name: event.event_name,
+                                source: event.fired_by,
+                                start_time: event.start_time
+                            });
+                        });
+                        $('#idEventHistory').dataTable({
+                            "order": [[2, 'desc']],
+                            "pageLength": 10,
+                            "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],                            
+                            "colReorder": true,
+                            "columns": [
+                                {"data": "event_name", "title": "Eventname"},
+                                {"data": "source", "title": "Quelle"},
+                                {"data": "seq", "title": "#"},
+                                {
+                                    "data": "start_time", 
+                                    "title": "Zeit",
+                                    // --- ADD THE RENDER FUNCTION HERE ---
+                                    "render": function(data, type, row) {
+                                        // 'data' is the value of start_time (e.g., 1761901265.28346)
+                                        if (type === 'display' || type === 'filter') {
+                                            // Convert Python timestamp (seconds) to JavaScript timestamp (milliseconds)
+                                            var date = new Date(data * 1000); 
+                                            
+                                            // You can choose any format here. 
+                                            // This uses toLocaleString for a flexible, readable output.
+                                            return date.toLocaleString(); 
+                                            
+                                            // OR, for a specific format (e.g., DD.MM.YYYY HH:mm:ss):
+                                            // var day = ('0' + date.getDate()).slice(-2);
+                                            // var month = ('0' + (date.getMonth() + 1)).slice(-2);
+                                            // var year = date.getFullYear();
+                                            // var hour = ('0' + date.getHours()).slice(-2);
+                                            // var minute = ('0' + date.getMinutes()).slice(-2);
+                                            // var second = ('0' + date.getSeconds()).slice(-2);
+                                            // return day + '.' + month + '.' + year + ' ' + hour + ':' + minute + ':' + second;
+                                        }
+                                        // For sorting and other types, return the original data (the number)
+                                        return data;
+                                    }
+                                    // ------------------------------------
+                                }
+                            ],
+                            "data": aReturnArray,
+                            "dom": 'rt<"bottom"ipl>'
+                            // The letters stand for:
+                            // r - Processing display element
+                            // t - The Table itself
+                            // l - Length changing input control ("Show X entries")
+                            // i - Table information summary ("Showing 1 to X of X entries")
+                            // p - Pagination control
+                            // f - Filtering input ("Search")
+                        }); 
+                        
 					});
 				});
 			</script>
@@ -43,7 +103,7 @@
 								</div>
 								<div class="col-xs-9 text-right">
 									<div class="huge" id="current_call_status">kein Anruf</div>
-									<div id="current_call_details"></div>
+									<div id="current_call_details">n/a</div>
 								</div>
 							</div>
 						</div>
@@ -56,9 +116,6 @@
 						</a>
 					</div>
 				</div>
-			</div>
-			<!-- /.row -->
-			<div class="row">
 				<div class="col-lg-6 col-md-9">
 					<div class="panel panel-green">
 						<div class="panel-heading">
@@ -84,5 +141,24 @@
 			</div>
 			<!-- /.row -->
 
+			<div class="row">
+				<div class="col-lg-12">
+					<div class="panel panel-primary">
+						<div class="panel-heading"><i class="fa fa-bar-chart-o"></i> Event Historie</div>
+						<!-- /.panel-heading -->
+						<div class="panel-body" style="padding: 10px">
+                            <div class="tab-pane fade active in" id="EventHistory">
+                                <div class="dataTable_wrapper well" style="background-color: #ffffff; padding: 0; border: 0">
+                                    <table class="display table table-bordered table-hover table-striped TableIsRefreshable" id="idEventHistory"></table>
+                                </div>
+                            </div>
+						</div>
+						<!-- /.panel-body -->
+					</div>
+					<!-- /.panel -->
+				</div>
+			</div>
+			<!-- /.row -->
+            
 {% endblock %}
 {# vim:set ts=4 noet sw=0: #}

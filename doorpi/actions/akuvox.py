@@ -152,7 +152,9 @@ class AkuvoxAction(Action):
     
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         try:
+            LOGGER.info ("calling akuvoxDND")
             akuvoxDND (self.__force, self.__dnd_mute)
+            LOGGER.info ("calling akuvoxDND")
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "[%s] Error contacting akuvox monitor: %s",

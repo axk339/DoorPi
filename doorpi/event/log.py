@@ -4,6 +4,8 @@ import pathlib
 import sqlite3
 from typing import Any, Mapping, Optional, Tuple, TypedDict
 
+import os
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -13,7 +15,6 @@ class EventLogEntry(TypedDict):
     event_name: str
     start_time: float
     additional_infos: str
-
 
 class EventLog:
     """Record keeper about fired events and executed actions"""
@@ -26,8 +27,9 @@ class EventLog:
 
         dbpath = pathlib.Path(db)
         dbpath.parent.mkdir(parents=True, exist_ok=True)
+        self._db_path = str(dbpath)
         self._db = sqlite3.connect(
-            database=str(dbpath),
+            database=str(self._db_path),
             timeout=1,
             isolation_level=None,
             check_same_thread=False,
@@ -56,7 +58,39 @@ class EventLog:
                 INSERT INTO metadata VALUES ('db_version', '1');
                 """
             )
+    
+    def clean (self) -> None:
+        try:
+            with self._db:
+                # 1. Count the number of entries
+                count_cursor = self._db.execute(
+                    "SELECT COUNT(*) FROM event_log"
+                )
+                current_count = count_cursor.fetchone()[0]
+                
+                # 2. If count > 100, delete the oldest entry
+                if current_count >= 10:
+                    LOGGER.info(
+                        "Event log has %d entries. Deleting oldest entry to cap size.",
+                        current_count
+                    )
+                    # Delete the entry with the minimum start_time (the oldest event)
+                    self._db.execute(
+                        """
+                        DELETE FROM event_log
+                        WHERE start_time = (SELECT MIN(start_time) FROM event_log)
+                        """
+                    )
 
+                # 3.vacuum db
+                size_before_bytes = os.path.getsize(self._db_path)
+                self._db.execute("VACUUM")
+                size_after_bytes = os.path.getsize(self._db_path)
+                LOGGER.info(f"Executing VACUUM, file size {size_before_bytes / 1024:.2f}kB > {size_after_bytes / 1024:.2f}kB")
+                
+        except Exception:
+            LOGGER.exception("Error cleaning db")
+    
     def count_event_log_entries(self, filter_: str = "") -> int:
         """Count the event log entries that match ``filter_``
 
@@ -155,6 +189,27 @@ class EventLog:
         """
         try:
             with self._db:
+                # 1. Count the number of entries
+                count_cursor = self._db.execute(
+                    "SELECT COUNT(*) FROM event_log"
+                )
+                current_count = count_cursor.fetchone()[0]
+                
+                # 2. If count > 100, delete the oldest entry
+                if current_count >= 10:
+                    LOGGER.info(
+                        "Event log has %d entries. Deleting oldest entry to cap size.",
+                        current_count
+                    )
+                    # Delete the entry with the minimum start_time (the oldest event)
+                    self._db.execute(
+                        """
+                        DELETE FROM event_log
+                        WHERE start_time = (SELECT MIN(start_time) FROM event_log)
+                        """
+                    )
+
+                # 3. Insert the new event
                 self._db.execute(
                     "INSERT INTO event_log VALUES (?, ?, ?, ?, ?)",
                     (
@@ -180,18 +235,21 @@ class EventLog:
             action_name: The configuration name of this action
             start_time: The timestamp when this action was executed
         """
-        try:
-            with self._db:
-                self._db.execute(
-                    "INSERT INTO action_log VALUES (?, ?, ?, ?)",
-                    (event_id, action_name, start_time, ""),
-                )
-        except sqlite3.Error:
-            LOGGER.exception(
-                "[%s] Cannot insert action %s into event log",
-                event_id,
-                action_name,
-            )
+        
+        LOGGER.trace ("skipping log_action: " + action_name)
+        
+        #try:
+        #    with self._db:
+        #        self._db.execute(
+        #            "INSERT INTO action_log VALUES (?, ?, ?, ?)",
+        #            (event_id, action_name, start_time, ""),
+        #        )
+        #except sqlite3.Error:
+        #    LOGGER.exception(
+        #        "[%s] Cannot insert action %s into event log",
+        #        event_id,
+        #        action_name,
+        #    )
 
     def destroy(self) -> None:
         """Shut down the event log"""
