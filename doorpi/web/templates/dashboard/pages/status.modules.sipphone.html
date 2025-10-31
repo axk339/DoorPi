@@ -20,8 +20,8 @@
 								result = result.sipphone.current_call;
 								$("#current_call_direction").text(result.direction);
 								$("#current_call_remote_uri").text(result.remote_uri);
-								$("#current_call_level_incoming").text(result.level_incoming);
-								$("#current_call_level_outgoing").text(result.level_outgoing);
+								$("#current_call_level_incoming").text(result.level_incoming+" dbm0");
+								$("#current_call_level_outgoing").text(result.level_outgoing+" dbm0");
 								$("#current_call_duration").text(result.total_time+" sec");
 								refreshIntervalId = setInterval(refresh_data, 200);
 							}
@@ -45,12 +45,6 @@
 						<div class="panel-body" id="current_call_direction">
 						</div>
 						<!-- /.panel-body -->
-						<div class="panel-footer">
-							Show the direction of the call.
-							Incoming = DoorPi to remote uri
-							Outgoing = remote uri to DoorPi
-						</div>
-						<!-- /.panel-footer -->
 					</div>
 					<!-- /.panel -->
 				</div>
@@ -60,8 +54,6 @@
 						<!-- /.panel-heading -->
 						<div class="panel-body" id="current_call_remote_uri"></div>
 						<!-- /.panel-body -->
-						<div class="panel-footer">Show the remote uri as sip format</div>
-						<!-- /.panel-footer -->
 					</div>
 					<!-- /.panel -->
 				</div>
@@ -69,23 +61,19 @@
 			<div class="row">
 				<div class="col-lg-2">
 					<div class="panel panel-red">
-						<div class="panel-heading"><i class="fa fa-bar-chart-o fa-fw"></i> Level recorded</div>
+						<div class="panel-heading"><i class="fa fa-bar-chart-o fa-fw"></i> Level Phone</div>
 						<!-- /.panel-heading -->
 						<div class="panel-body" id="current_call_level_incoming"></div>
 						<!-- /.panel-body -->
-						<div class="panel-footer">Show the measured sound volume recorded locally (sent to remote). It is expressed in dbm0.</div>
-						<!-- /.panel-footer -->
 					</div>
 					<!-- /.panel -->
 				</div>
 				<div class="col-lg-2">
 					<div class="panel panel-green">
-						<div class="panel-heading"><i class="fa fa-bar-chart-o fa-fw"></i> Level played</div>
+						<div class="panel-heading"><i class="fa fa-bar-chart-o fa-fw"></i> Level Door</div>
 						<!-- /.panel-heading -->
 						<div class="panel-body" id="current_call_level_outgoing"></div>
 						<!-- /.panel-body -->
-						<div class="panel-footer">Show the measured sound volume played locally (received from remote). It is expressed in dbm0.</div>
-						<!-- /.panel-footer -->
 					</div>
 					<!-- /.panel -->
 				</div>
@@ -95,8 +83,6 @@
 						<!-- /.panel-heading -->
 						<div class="panel-body" id="current_call_duration"></div>
 						<!-- /.panel-body -->
-						<div class="panel-footer">Show the current call duration time in seconds.</div>
-						<!-- /.panel-footer -->
 					</div>
 					<!-- /.panel -->
 				</div>

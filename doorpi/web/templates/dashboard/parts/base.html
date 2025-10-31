@@ -75,49 +75,14 @@
               <li>
                 <a href="/dashboard/pages/index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
               </li>
-              <li>
-                <a href="#"><i class="fa fa-bar-chart-o fa-fw"></i>&nbsp;Status<span class="fa arrow"></span></a>
-                <ul class="nav nav-second-level">
-                  <li>
-                    <a href="/dashboard/pages/status.modules.eventhandler.html">Event handler</a>
-                  </li>
-                  <li>
-                    <a href="/dashboard/pages/status.environment.html">Environment</a>
-                  </li>
-                  <li>
-                    <a href="#">Modules<span class="fa arrow"></span></a>
-                    <ul class="nav nav-third-level">
-                      <li>
-                        <a href="/dashboard/pages/status.modules.config.html">Configuration</a>
-                      </li>
-                      <li>
-                        <a href="/dashboard/pages/status.modules.keyboard.html">Keyboards</a>
-                      </li>
-                      <li>
-                        <a href="/dashboard/pages/status.modules.sipphone.html">SIP-Phone</a>
-                      </li>
-                    </ul>
-                  </li>
-                </ul>
-                <!-- /.nav-second-level -->
-              </li>
-              <li>
-                <a href="/dashboard/pages/camera.html"><i class="fa fa-camera fa-fw"></i>&nbsp;Camera</a>
-              </li>
+			  <li>
+				<a href="/dashboard/pages/status.modules.eventhandler.html"><i class="fa fa-bar-chart-o fa-fw"></i> Event handler</a>
+			  </li>
+			  <li>
+				<a href="/dashboard/pages/status.modules.sipphone.html"><i class="fa fa-bar-chart-o fa-fw"></i> SIP-Phone</a>
+			  </li>
               <li>
                 <a href="/dashboard/pages/config.html"><i class="fa fa-wrench fa-fw"></i>&nbsp;Configuration</a>
-              </li>
-              <li>
-                <a href="#"><i class="fa fa-sitemap fa-fw"></i> More...<span class="fa arrow"></span></a>
-                <ul class="nav nav-second-level">
-                  <li>
-                    <a href="https://github.com/motom001/DoorPi" target="_blank"><i class="fa fa-dashboard fa-fw"></i> DoorPi @ GitHub</a>
-                  </li>
-                  <li>
-                    <a href="https://github.com/motom001/DoorPi/wiki" target="_blank"><i class="fa fa-files-o fa-fw"></i> DoorPi Wiki</a>
-                  </li>
-                </ul>
-                <!-- /.nav-second-level -->
               </li>
             </ul>
           </div>
@@ -125,7 +90,7 @@
         </div>
         <!-- /.navbar-static-side -->
       </nav>
-      <div id="page-wrapper">
+      <div id="page-wrapper" style="padding-top: 25px">
         {% block content %}{% endblock %}
       </div><!-- /#page-wrapper -->
     </div><!-- /#wrapper -->
