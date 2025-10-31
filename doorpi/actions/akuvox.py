@@ -128,7 +128,10 @@ def akuvoxDND (force, dnd_mute):
 			LOGGER.debug ("# new volume: " + str(vol_level) + ", was " + str(volstatus))
 	
 	except requests.exceptions.Timeout:
-		LOGGER.warning("Akuvox monitor request timed out")
+		LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
+		with open(indfile, "w") as f:
+			f.write("unmute")
+			LOGGER.info ("# stored status 'unmute' in " + str(indfile))
 	
 	except requests.exceptions.RequestException as e:
 		LOGGER.error (f"An error occurred: {e}")
@@ -152,9 +155,7 @@ class AkuvoxAction(Action):
     
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         try:
-            LOGGER.info ("calling akuvoxDND")
             akuvoxDND (self.__force, self.__dnd_mute)
-            LOGGER.info ("calling akuvoxDND")
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "[%s] Error contacting akuvox monitor: %s",
