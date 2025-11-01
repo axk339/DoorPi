@@ -25,7 +25,8 @@ class SuntimeTimer:
     
     def __init__(self, lat, lng) -> None:
         self.suntime = suntime(lat, lng)
-        self.lastUpdate = datetime.datetime (1900, 1, 1)
+        self.lastUpdate = datetime.datetime.now() - datetime.timedelta(1)
+        self.update (datetime.datetime.now())
 
     def update(self, now) -> None:
         #now = datetime.datetime.now()
