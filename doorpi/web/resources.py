@@ -78,7 +78,10 @@ async def _resource_template(
             ],
             "proginfo": "{} - version: {}".format(
                 doorpi.metadata.distribution.metadata["Name"],
-                doorpi.metadata.distribution.metadata["Version"],
+                doorpi.metadata.distribution.metadata["Version"].split("+", 1)[0]
+            ),
+            "proginfoshort": "{}".format(
+                doorpi.metadata.distribution.metadata["Name"]
             ),
         },
     )

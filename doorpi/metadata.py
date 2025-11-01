@@ -18,26 +18,32 @@ supporters = (
     "Michael Hauer <frrr@gmx.at>",
     "Andreas Schwarz <doorpi@schwarz-ketsch.de>",
     "Max Rößler <max_kr@gmx.de>",
-    "missing someone? -> sorry -> mail me",
+)
+coauthor = (
+    "emphasis: https://github.com/emphasize",
+    "Wüstengecko: https://github.com/Wuestengecko",
+    "motom001: https://github.com/motom001",
 )
 
 # created with: http://patorjk.com/software/taag/#p=display&f=Ogre&t=DoorPi
 epilog = r"""
     ___                  ___ _
    /   \___   ___  _ __ / _ (_)  {project}
-  / /\ / _ \ / _ \| '__/ /_)/ |  version:   {version}
- / /_// (_) | (_) | | / ___/| |  license:   {license}
-/___,' \___/ \___/|_| \/    |_|  URL:       <{url}>
+  / /\ / _ \ / _ \| '__/ /_)/ |  Version:   {version}
+ / /_// (_) | (_) | | / ___/| |  License:   {license}
+/___,' \___/ \___/|_| \/    |_|  URL:       {url}
 
 Author:     {author}
+Fork from:  {coauthor}
 Supporter:  {supporters}
 """.format(
     license=distribution.metadata["License"],
     project=distribution.metadata["Name"],
     version=distribution.metadata["Version"],
-    author="{} <{}>".format(
+    author="{}: {}".format(
         distribution.metadata["Author"], distribution.metadata["Author-email"]
     ),
+    coauthor="\n            ".join(coauthor),
     supporters="\n            ".join(supporters),
     url=distribution.metadata["Home-page"],
 )
