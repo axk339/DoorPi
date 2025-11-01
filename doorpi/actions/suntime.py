@@ -18,6 +18,11 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 class SuntimeTimer:
+    AMh = 6
+    AMm = 0
+    UMh = 20
+    UMm = 0
+    
     def __init__(self, lat, lng) -> None:
         self.suntime = suntime(lat, lng)
         self.lastUpdate = datetime.datetime (1900, 1, 1)
@@ -26,7 +31,7 @@ class SuntimeTimer:
         #now = datetime.datetime.now()
         if now.day != self.lastUpdate.day:
             self.AMh, self.AMm, self.UMh, self.UMm = self.suntime.Suntime (1)
-            LOGGER.info ("Updating suntime - Aufgang " + str(self.AMh) + ":" + str(self.AMm) + ", Untergang " + str(self.UMh) + ":" + str(self.UMm))
+            LOGGER.info(f"Updating suntime - Aufgang {self.AMh:02d}:{self.AMm:02d}, Untergang {self.UMh:02d}:{self.UMm:02d}")
             self.lastUpdate = now
 
     def isDay(self) -> bool:

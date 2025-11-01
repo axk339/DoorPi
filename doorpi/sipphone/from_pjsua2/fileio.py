@@ -131,12 +131,13 @@ class DialTonePlayer:
         #check if new special mode needed
         for egg in self._easteregg:
             if egg.lower() == "halloween":
-                if (today.month == 10 and today.day == 31): # or self._ee_mode < 0: #only for test, activates always at startup
-                    LOGGER.info("Dial tone player easteregg: Switching to halloween mode")
-                    self._ee_mode = 1
-                    filename = self._easteregg[egg]
-                    LOGGER.debug("Dial tone player easteregg: File %s", filename)
-                    switch = True
+                if self._ee_mode != 1:
+                    if (today.month == 10 and today.day == 31): # or self._ee_mode < 0: #only for test, activates always at startup
+                        LOGGER.info("Dial tone player easteregg: Switching to halloween mode")
+                        self._ee_mode = 1
+                        filename = self._easteregg[egg]
+                        LOGGER.debug("Dial tone player easteregg: File %s", filename)
+                        switch = True
         #create new dialtone player, if no player (=at init, or when special mode switch)
         if self._ee_mode < 0 or switch:
             if self._ee_mode < 0:

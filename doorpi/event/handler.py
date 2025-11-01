@@ -153,7 +153,7 @@ class EventHandler:
         if extra is None:
             extra = {}
         suppress_logs = _suppress_logs(event)
-
+        
         if source not in self.sources:
             LOGGER.warning(
                 "Unknown event source %s, skipping %s", source, event
@@ -170,17 +170,24 @@ class EventHandler:
             )
             return
 
+        skipLater = False
         if event not in self.actions:
             if not suppress_logs:
                 LOGGER.debug("No actions registered for %s, skipping", event)
-            return
+            # for webevents, make sure to skip after log_event only
+            if source != "doorpi.web":
+                return
+            else:
+                skipLater = True
 
         event_id = generate_id()
         start_time = time.time()
-
+        
         if not suppress_logs:
             self.log.log_event(event_id, source, event, start_time, extra)
-
+        if skipLater:
+            return
+        
         extra.update(
             {
                 "last_fired": str(start_time),

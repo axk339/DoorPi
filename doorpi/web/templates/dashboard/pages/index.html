@@ -35,18 +35,21 @@
                             aReturnArray.push({
                                 seq: seqNo,
                                 event_name: event.event_name,
+                                //extra: event.additional_infos,
                                 source: event.fired_by,
                                 start_time: event.start_time
                             });
                         });
                         $('#idEventHistory').dataTable({
                             "order": [[2, 'desc']],
+                            //"order": [[3, 'desc']],
                             "pageLength": 10,
                             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],                            
                             "colReorder": true,
                             "columns": [
                                 {"data": "event_name", "title": "Eventname"},
                                 {"data": "source", "title": "Quelle"},
+                                //{"data": "extra", "title": "Extra"},
                                 {"data": "seq", "title": "#"},
                                 {
                                     "data": "start_time", 
@@ -103,7 +106,7 @@
 								</div>
 								<div class="col-xs-9 text-right">
 									<div class="huge" id="current_call_status">kein Anruf</div>
-									<div id="current_call_details">n/a</div>
+									<div id="current_call_details"></div>
 								</div>
 							</div>
 						</div>

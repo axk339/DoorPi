@@ -69,7 +69,7 @@ class EventLog:
                 current_count = count_cursor.fetchone()[0]
                 
                 # 2. If count > 100, delete the oldest entry
-                if current_count >= 50:
+                if current_count >= 100:
                     LOGGER.info(
                         "Event log has %d entries. Deleting oldest entry to cap size.",
                         current_count
@@ -196,8 +196,8 @@ class EventLog:
                 current_count = count_cursor.fetchone()[0]
                 
                 # 2. If count > 100, delete the oldest entry
-                if current_count >= 50:
-                    LOGGER.info(
+                if current_count >= 100:
+                    LOGGER.debug(
                         "Event log has %d entries. Deleting oldest entry to cap size.",
                         current_count
                     )

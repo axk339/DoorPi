@@ -158,7 +158,7 @@ def get_user_session(
         doorpi.INSTANCE.event_handler.fire_event(
             "OnWebAuthLogin",
             "doorpi.web",
-            extra={"session": session},
+            extra={"username": user},
         )
     return session
 

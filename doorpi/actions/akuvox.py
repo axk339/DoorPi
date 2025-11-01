@@ -15,8 +15,12 @@ from . import Action
 LOGGER = logging.getLogger(__name__)
 
 import requests
+import time
+last_timeout_warning_time = 0
 
 def akuvoxDND (force, dnd_mute):
+	global last_timeout_warning_time
+	
 	getdnd = True		# get always status
 	if force:
 		setdnd = True	# and update if target is different
@@ -128,10 +132,27 @@ def akuvoxDND (force, dnd_mute):
 			LOGGER.debug ("# new volume: " + str(vol_level) + ", was " + str(volstatus))
 	
 	except requests.exceptions.Timeout:
-		LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
-		with open(indfile, "w") as f:
-			f.write("unmute")
-			LOGGER.info ("# stored status 'unmute' in " + str(indfile))
+		current_time = time.time()
+		loggedWarning = False
+		if current_time - last_timeout_warning_time >= 3600:
+			LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
+			last_timeout_warning_time = current_time # Update the time of the last warning
+			loggedWarning = True
+		else:
+			LOGGER.debug("Akuvox monitor request timed out, defaulting to 'unmute' (warning suppressed for 1 hour)")
+		try:
+			with open(indfile) as f:
+				content = f.readline()
+			if content != "unmute":
+				with open(indfile, "w") as f:
+					f.write("unmute")
+					if not loggedWarning:
+						LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
+					LOGGER.info ("# stored status 'unmute' in " + str(indfile))
+		except:
+			if not loggedWarning:
+				LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
+			LOGGER.info ("# error processing file " + str(indfile))
 	
 	except requests.exceptions.RequestException as e:
 		LOGGER.error (f"An error occurred: {e}")

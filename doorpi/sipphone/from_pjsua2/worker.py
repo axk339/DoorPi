@@ -35,6 +35,9 @@ class Worker:
         # ``uaConfig.mainThreadOnly``, this ensures that all PJSIP
         # events will be handled here, and not by any native threads.
         self.__ep.libCreate()
+        # Note: libInit will try to initialize all available audio systems
+        # If jack audio library is present, but no jack audio server installed this will produce error messages
+        # >> sudo apt-get remove libjack-jackd2-0
         self.__ep.libInit(config.endpoint_config())
         self.__ep.transportCreate(
             pj.PJSIP_TRANSPORT_UDP, config.transport_config()
