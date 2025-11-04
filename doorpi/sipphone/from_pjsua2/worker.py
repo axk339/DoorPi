@@ -39,9 +39,7 @@ class Worker:
         # If jack audio library is present, but no jack audio server installed this will produce error messages
         # >> sudo apt-get remove libjack-jackd2-0
         self.__ep.libInit(config.endpoint_config())
-        self.__ep.transportCreate(
-            pj.PJSIP_TRANSPORT_UDP, config.transport_config()
-        )
+        self.__ep.transportCreate(pj.PJSIP_TRANSPORT_UDP, config.transport_config())
         config.setup_audio(self.__ep)
         if self.__config["video.enabled"]:
             config.setup_video(self.__ep)

@@ -31,26 +31,30 @@
                         
                         oConfigObject = result.history_event;
                         var aReturnArray = new Array();
+                        var count = 0;
+						var reachedStartup = false;
                         $.each(oConfigObject, function(seqNo, event) {
-                            aReturnArray.push({
-                                seq: seqNo,
-                                event_name: event.event_name,
-                                //extra: event.additional_infos,
-                                source: event.fired_by,
-                                start_time: event.start_time
-                            });
+							if (!reachedStartup) {
+								aReturnArray.push({
+									event_name: event.event_name,
+									start_time: event.start_time,
+									seq: seqNo
+								});
+								count += 1; 
+								reachedStartup = (event.event_name == "OnStartup");
+							}
                         });
+                        $("#event_history_counter").text(
+							result.event_handler.events_since_start
+							+ ' / '
+							+ result.history_event.length
+						);
                         $('#idEventHistory').dataTable({
-                            "order": [[2, 'desc']],
-                            //"order": [[3, 'desc']],
-                            "pageLength": 10,
+                            "pageLength": 25,
                             "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],                            
                             "colReorder": true,
+							"order": [[2, 'asc']],
                             "columns": [
-                                {"data": "event_name", "title": "Eventname"},
-                                {"data": "source", "title": "Quelle"},
-                                //{"data": "extra", "title": "Extra"},
-                                {"data": "seq", "title": "#"},
                                 {
                                     "data": "start_time", 
                                     "title": "Zeit",
@@ -60,25 +64,18 @@
                                         if (type === 'display' || type === 'filter') {
                                             // Convert Python timestamp (seconds) to JavaScript timestamp (milliseconds)
                                             var date = new Date(data * 1000); 
-                                            
-                                            // You can choose any format here. 
-                                            // This uses toLocaleString for a flexible, readable output.
-                                            return date.toLocaleString(); 
-                                            
-                                            // OR, for a specific format (e.g., DD.MM.YYYY HH:mm:ss):
-                                            // var day = ('0' + date.getDate()).slice(-2);
-                                            // var month = ('0' + (date.getMonth() + 1)).slice(-2);
-                                            // var year = date.getFullYear();
-                                            // var hour = ('0' + date.getHours()).slice(-2);
-                                            // var minute = ('0' + date.getMinutes()).slice(-2);
-                                            // var second = ('0' + date.getSeconds()).slice(-2);
-                                            // return day + '.' + month + '.' + year + ' ' + hour + ':' + minute + ':' + second;
+											var hour = ('0' + date.getHours()).slice(-2);
+											var minute = ('0' + date.getMinutes()).slice(-2);
+											var second = ('0' + date.getSeconds()).slice(-2);
+											return hour + ':' + minute + ':' + second;
                                         }
                                         // For sorting and other types, return the original data (the number)
                                         return data;
                                     }
                                     // ------------------------------------
-                                }
+                                },
+                                {"data": "event_name", "title": "Eventname"},
+								{"data": "seq", "title": "#", "visible": false}
                             ],
                             "data": aReturnArray,
                             "dom": 'rt<"bottom"ipl>'
@@ -97,7 +94,7 @@
 
 			<!-- /.row -->
 			<div class="row">
-				<div class="col-lg-6 col-md-9">
+				<div class="col-lg-4 col-md-9">
 					<div class="panel panel-primary" id="current_call_panel">
 						<div class="panel-heading">
 							<div class="row">
@@ -119,7 +116,7 @@
 						</a>
 					</div>
 				</div>
-				<div class="col-lg-6 col-md-9">
+				<div class="col-lg-4 col-md-9">
 					<div class="panel panel-green">
 						<div class="panel-heading">
 							<div class="row">
@@ -128,7 +125,29 @@
 								</div>
 								<div class="col-xs-9 text-right">
 									<div class="huge" id = "event_handler_length"></div>
-									<div>Events mit Aktion / registrierte Aktionen</div>
+									<div>registrierte Events / Aktionen</div>
+								</div>
+							</div>
+						</div>
+						<a href="/dashboard/pages/status.modules.eventhandler.html">
+							<div class="panel-footer">
+								<span class="pull-left">Details</span>
+								<span class="pull-right"><i class="fa fa-arrow-circle-right"></i></span>
+								<div class="clearfix"></div>
+							</div>
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-4 col-md-9">
+					<div class="panel panel-primary">
+						<div class="panel-heading">
+							<div class="row">
+								<div class="col-xs-3">
+									<i class="fa fa-tasks fa-5x"></i>
+								</div>
+								<div class="col-xs-9 text-right">
+									<div class="huge" id = "event_history_counter"></div>
+									<div>Events seit Start / in Log</div>
 								</div>
 							</div>
 						</div>

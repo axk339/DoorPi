@@ -16,7 +16,7 @@ def get(
     try:
         max_count = int(value[0])
     except (IndexError, ValueError):
-        max_count = 100
+        max_count = 1000
 
     return doorpi_obj.event_handler.log.get_event_log(max_count, filter_)
 

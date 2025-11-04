@@ -22,6 +22,7 @@ def get(
         },
         "threads": lambda eh: str(eh.threads),
         "idle": operator.attrgetter("idle"),
+        "events_since_start": lambda eh: eh.log._event_count
     }
 
     if not name:

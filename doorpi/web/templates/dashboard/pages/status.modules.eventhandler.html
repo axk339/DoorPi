@@ -29,6 +29,7 @@
 								<li class="active"><a href="#RegEvents" data-toggle="tab" aria-expanded="true">Events mit Aktion</a></li>
 								<li class=""><a href="#RegAction" data-toggle="tab" aria-expanded="false">Registrierte Aktionen</a></li>
 								<li class=""><a href="#SourceEvent" data-toggle="tab" aria-expanded="false">Verfügbare Events</a></li>
+								<li class=""><a href="#EventHistory" data-toggle="tab" aria-expanded="false">Event Historie</a></li>
 							</ul>
 							<div class="tab-content">
 								<div class="tab-pane fade active in" id="RegEvents">
@@ -44,6 +45,11 @@
 								<div class="tab-pane fade" id="SourceEvent">
 									<div class="dataTable_wrapper well">
 										<table class="display table table-bordered table-hover table-striped TableIsRefreshable" id="idSourceEvents"></table>
+									</div>
+								</div>
+								<div class="tab-pane fade" id="EventHistory">
+									<div class="dataTable_wrapper well">
+										<table class="display table table-bordered table-hover table-striped TableIsRefreshable" id="idEventHistory"></table>
 									</div>
 								</div>
 							</div>
@@ -201,6 +207,58 @@
 					$('.refreshButton').click(function() {
 						$('.TableIsRefreshable').DataTable().ajax.reload();
 					});
+					$('#idEventHistory').dataTable({
+						"ajax": {
+							"url": "/status?module=history_event&output=json",
+							"type": "GET",
+							"dataSrc": function (aSourceObject) {
+								oConfigObject = aSourceObject.history_event;
+								var aReturnArray = new Array();
+								$.each(oConfigObject, function(seqNo, event) {
+                                    aReturnArray.push({
+                                        seq: seqNo,
+                                        event_name: event.event_name,
+                                        extra: event.additional_infos,
+                                        source: event.fired_by,
+                                        start_time: event.start_time
+                                    });
+								});
+								return aReturnArray;
+					    	}
+						},
+						"order": [[4, 'asc']],
+						"lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+						"iDisplayLength": 100,
+						"colReorder": true,
+						"columns": [
+							{
+								"data": "start_time", 
+								"title": "Zeit",
+								// --- ADD THE RENDER FUNCTION HERE ---
+								"render": function(data, type, row) {
+									// 'data' is the value of start_time (e.g., 1761901265.28346)
+									if (type === 'display' || type === 'filter') {
+										// Convert Python timestamp (seconds) to JavaScript timestamp (milliseconds)
+										var date = new Date(data * 1000); 
+										var day = ('0' + date.getDate()).slice(-2);
+										var month = ('0' + (date.getMonth() + 1)).slice(-2);
+										var year = date.getFullYear();
+										var hour = ('0' + date.getHours()).slice(-2);
+										var minute = ('0' + date.getMinutes()).slice(-2);
+										var second = ('0' + date.getSeconds()).slice(-2);
+										return day + '.' + month + '.' + year + '&nbsp;' + hour + ':' + minute + ':' + second;
+									}
+									// For sorting and other types, return the original data (the number)
+									return data;
+								}
+								// ------------------------------------
+							},
+							{"data": "event_name", "title": "Eventname"},
+							{"data": "source", "title": "Quelle"},
+							{"data": "extra", "title": "Extra"},
+							{"data": "seq", "title": "#"}
+						]
+			    	});
 				});
 			</script>
 {% endblock %}

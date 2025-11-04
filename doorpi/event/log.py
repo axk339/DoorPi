@@ -18,6 +18,7 @@ class EventLogEntry(TypedDict):
 
 class EventLog:
     """Record keeper about fired events and executed actions"""
+    MAX_ENTRIES = 1000
 
     def __init__(self, db: str) -> None:
         if not sqlite3.threadsafety:
@@ -34,6 +35,7 @@ class EventLog:
             isolation_level=None,
             check_same_thread=False,
         )
+        self._event_count = 0;
 
         with self._db:
             self._db.executescript(
@@ -69,7 +71,7 @@ class EventLog:
                 current_count = count_cursor.fetchone()[0]
                 
                 # 2. If count > 100, delete the oldest entry
-                if current_count >= 100:
+                if current_count >= self.MAX_ENTRIES:
                     LOGGER.info(
                         "Event log has %d entries. Deleting oldest entry to cap size.",
                         current_count
@@ -116,7 +118,7 @@ class EventLog:
 
     def get_event_log(
         self,
-        max_count: int = 100,
+        max_count: int = 1000,
         filter_: str = "",
     ) -> Tuple[EventLogEntry, ...]:
         """Get event records from the event log
@@ -149,7 +151,7 @@ class EventLog:
                 OR fired_by LIKE ?
                 OR event_name LIKE ?
                 OR start_time LIKE ?
-                ORDER BY start_time ASC
+                ORDER BY start_time DESC
                 LIMIT ?""",
                 (f"%{filter_}%",) * 4 + (max_count,),
             )
@@ -196,7 +198,7 @@ class EventLog:
                 current_count = count_cursor.fetchone()[0]
                 
                 # 2. If count > 100, delete the oldest entry
-                if current_count >= 100:
+                if current_count >= self.MAX_ENTRIES:
                     LOGGER.debug(
                         "Event log has %d entries. Deleting oldest entry to cap size.",
                         current_count
@@ -220,6 +222,8 @@ class EventLog:
                         json.dumps(extra, sort_keys=True) if extra else "",
                     ),
                 )
+                self._event_count += 1;
+                
         except sqlite3.Error:
             LOGGER.exception(
                 "[%s] Cannot insert event %s into event log", event_id, event

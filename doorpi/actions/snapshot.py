@@ -93,10 +93,13 @@ class URLSnapshotAction(SnapshotAction):
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         import requests
 
-        response = requests.get(self.__url, stream=True)
-        with self.get_next_path().open("wb") as output:
-            for chunk in response.iter_content(1048576):  # 1 MiB chunks
-                output.write(chunk)
+        try:
+            response = requests.get(self.__url, stream=True)
+            with self.get_next_path().open("wb") as output:
+                for chunk in response.iter_content(1048576):  # 1 MiB chunks
+                    output.write(chunk)
+        except Exception as e:
+            LOGGER.error(f"Can't make a snapshot: {str(e)}")
 
         self.cleanup()
 

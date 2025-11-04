@@ -26,9 +26,7 @@ class DoorPiSD:
             except OSError:
                 LOGGER.exception("Unable to open notification socket")
         else:
-            LOGGER.info(
-                "No NOTIFY_SOCKET in environment, sd-notify protocol disabled"
-            )
+            LOGGER.debug("No NOTIFY_SOCKET in environment, sd-notify protocol disabled")
 
     def ready(self) -> None:
         """Tell the service manager that we are ready
