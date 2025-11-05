@@ -1,0 +1,4 @@
+[config.firebase.adminjson]
+_description = "Firebase json with admin private key"
+_type = "path"
+_default = "~/firebase-admin.json"
