@@ -26,7 +26,7 @@ def firebase_init():
     if (not firebaseInit):
         try:
             firebaseInit = True
-            firebase_cred = credentials.Certificate("/home/pi/firebase/firebase-admin.json")
+            firebase_cred = credentials.Certificate(doorpi.INSTANCE.config["firebase.adminjson"])
             firebase_app  = firebase_admin.initialize_app(firebase_cred)
             LOGGER.info ("Firebase initated")
         except Exception as e:
