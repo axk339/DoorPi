@@ -49,7 +49,7 @@ class StatuslogAction(Action):
             rec = "none"
             if doorpi.sipphone.from_pjsua2.fileio.RECORDER_latest != None:
                 rec = doorpi.sipphone.from_pjsua2.fileio.RECORDER_latest
-            LOGGER.info ("Rec=" + str(rec))
+            #LOGGER.info ("Rec=" + str(rec))
             with self.__filename.open("a") as f:
                 f.write(prefix+","+content+","+snapfile+","+rec+"\n")
         except Exception:  # pylint: disable=broad-except
