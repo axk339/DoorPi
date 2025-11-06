@@ -43,7 +43,8 @@ class StatuslogAction(Action):
         
         try:
             self.nextFile()
-            snapfile = str(snapshot.SnapshotAction.list_all()[-1])
+            snap_len = len(str(doorpi.INSTANCE.config["snapshots.directory"])) + len(str(doorpi.INSTANCE.base_path)) + 2
+            snapfile = str(snapshot.SnapshotAction.list_all()[-1])[snap_len:]
             prefix = datetime.datetime.now().strftime("%Y.%m.%d %H:%M:%S")
             with self.__filename.open("a") as f:
                 f.write(prefix+","+content+","+snapfile+"\n")
