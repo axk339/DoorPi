@@ -82,7 +82,68 @@ class Worker:
             "OnSIPPhoneDestroy", EVENT_SOURCE
         )
         LOGGER.info("SIP phone shutdown")
-        self.__ep.libDestroy()
+                
+        # 2. **CRITICAL STEP: Delete the active account**
+        # Check if the account exists and is a pj.Account derivative (like AccountCallback)
+        if hasattr(self, '_SIPPhone__account') and self._SIPPhone__account is not None:
+            try:
+                LOGGER.info("Unregistering and deleting SIP account...")
+                # The delete() call sends the UNREGISTER SIP message and cleans up account resources
+                self._SIPPhone__account.delete()
+                # It's good practice to remove the reference after deletion
+                self._SIPPhone__account = None 
+            except Exception as e:
+                LOGGER.warning(f"Error while deleting SIP account: {e}")
+                
+        # --- NOTE: If you have active calls, they must be hung up and deleted here ---
+        
+        
+        
+        # 3. Wait for PJSIP to finish processing pending events (including UNREGISTER)
+        LOGGER.info("Handling final PJSIP events to ensure clean unregistration...")
+        
+        # Use a maximum number of iterations or a timeout here to prevent infinite loop 
+        # in case of internal issues, but a simple loop is often sufficient for shutdown.
+        max_loops = 500  # Process events for up to 500 * 20ms = 10 seconds
+        loop_count = 0
+        
+        while loop_count < max_loops:
+            loop_count += 1
+            try:
+                # Handle events for a short period (20 milliseconds)
+                num_ev = self.__ep.libHandleEvents(20) 
+                
+                # If no events were handled, the library is idle and has settled
+                if num_ev == 0:
+                    LOGGER.info("PJSIP events settled, proceeding to destroy library.")
+                    break
+                    
+                # Handle potential errors during event processing
+                if num_ev < 0:
+                     raise RuntimeError(
+                        "Error during event loop shutdown: {msg} ({errno})".format(
+                            errno=-num_ev, msg=self.__ep.utilStrError(-num_ev)
+                        )
+                    )
+            except Exception as e:
+                 LOGGER.warning(f"Exception during PJSIP event loop: {e}")
+                 break # Exit loop on unrecoverable error
+    
+        if loop_count == max_loops:
+            LOGGER.warning("PJSIP event loop timed out (max loops reached).")
+            
+        # 4. Destroy the native library (final step)
+        try:
+            LOGGER.info("Calling libDestroy() to shut down PJSIP core.")
+            self.__ep.libDestroy()
+            LOGGER.info("PJSIP native library successfully destroyed.")
+        except Exception as e:
+            # Catching the exception here can prevent the process from crashing 
+            # if the library is already in a bad state.
+            LOGGER.error(f"Failed to destroy PJSIP library: {e}")
+    
+        LOGGER.info("SIP phone shutdown complete")
+
 
     def handleNativeEvents(self) -> None:
         """Poll events from the native library"""

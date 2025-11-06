@@ -80,6 +80,7 @@ class DialTonePlayer:
         #except pj.Error as err:
         #    LOGGER.error("Unable to create dial tone player: %s", err.info())
         #    self._player = None
+        self._player = None
         
         #adapt dialtone according to special days
         self._easteregg = easteregg

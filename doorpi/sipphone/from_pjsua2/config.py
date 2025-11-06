@@ -69,7 +69,8 @@ def account_config() -> pj.AccountConfig:
     authCred.data = sip_pass
     acfg.sipConfig.authCreds.append(authCred)
 
-    acfg.presConfig.publishEnabled = True
+    #acfg.presConfig.publishEnabled = True
+    acfg.presConfig.publishEnabled = False
     return acfg
 
 
