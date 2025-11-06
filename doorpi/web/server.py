@@ -21,6 +21,8 @@ RequestHandler = T.Callable[
     [aiohttp.web.Request], T.Awaitable[aiohttp.web.StreamResponse]
 ]
 
+_WEB_LOOP: T.Optional[asyncio.AbstractEventLoop] = None
+_SHUTDOWN_EVENT: T.Optional[asyncio.Event] = None
 
 async def run() -> None:
     """Start the web server thread"""
@@ -30,6 +32,13 @@ async def run() -> None:
         _ip = socket.gethostbyname(socket.gethostname())
     shutdown = asyncio.Event()
 
+    # Capture the loop that is running this coroutine
+    web_loop = asyncio.get_running_loop() 
+
+    # Add global variables to store the loop and event
+    doorpi.web.server._WEB_LOOP = web_loop
+    doorpi.web.server._SHUTDOWN_EVENT = shutdown
+    
     app = aiohttp.web.Application()
     app["doorpi_web_config"] = cfg
     doorpi.web.resources.setup(app)
@@ -54,16 +63,31 @@ async def run() -> None:
 
     eh = doorpi.INSTANCE.event_handler
     eh.fire_event_sync("OnWebServerStart", "doorpi.web")
-    eh.register_action(
-        "OnShutdown",
-        doorpi.actions.CallbackAction(
-            asyncio.get_event_loop().call_soon_threadsafe,
-            shutdown.set,
-        ),
-    )
-
+    #eh.register_action(
+    #    "OnShutdown",
+    #    doorpi.actions.CallbackAction(
+    #        web_loop.call_soon_threadsafe,
+    #        shutdown.set,
+    #    ),
+    #)
+    
     try:
         await shutdown.wait()
+        logger.info("Webserver received shutdown signal. Starting cleanup...") # Log here
     finally:
-        await runner.cleanup()
+        logger.info("Starting aiohttp runner shutdown and cleanup...")
+        
+        # 1. Explicitly stop listening and gracefully close connections
+        # This function handles the graceful shutdown process.
+        await runner.shutdown()
+        
+        # 2. Final cleanup of resources. NOTE: No 'timeout' argument here.
+        await runner.cleanup() 
+        
+        doorpi.web.server.doorpi.web.server._WEB_LOOP = None
+        doorpi.web.server._SHUTDOWN_EVENT = None
+        
+        # Unregistering the source should happen now
         eh.unregister_source("doorpi.web", force=True)
+        logger.info("Webserver cleanup complete and source unregistered.")
+
