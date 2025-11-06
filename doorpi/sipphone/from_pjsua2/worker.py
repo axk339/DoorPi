@@ -81,6 +81,7 @@ class Worker:
         doorpi.INSTANCE.event_handler.fire_event_sync(
             "OnSIPPhoneDestroy", EVENT_SOURCE
         )
+        LOGGER.info("SIP phone shutdown")
         self.__ep.libDestroy()
 
     def handleNativeEvents(self) -> None:

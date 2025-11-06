@@ -166,6 +166,8 @@ class CallRecorder:
         self.__keep = 0
 
         self.__recorder: Optional[pj.AudioMediaRecorder] = None
+        
+        doorpi.sipphone.from_pjsua2.fileio.RECORDER_latest = None
 
         eh = doorpi.INSTANCE.event_handler
         eh.register_action("OnCallOutgoing_S", CallbackAction(self.startEarly))
@@ -184,7 +186,7 @@ class CallRecorder:
             #create year folder if recordings are kept forever
             if self.__keep <= 0:
                 self.__pathyear = self.__path / datetime.datetime.now().strftime(
-                    "%Y"
+                    "%Y-%M"
                 )
             else:
                 self.__pathyear = self.__path
@@ -202,6 +204,7 @@ class CallRecorder:
             )
             #LOGGER.debug("Starting recording into file %s", fname)
             LOGGER.info("Starting recording into file %s", fname)
+            doorpi.sipphone.from_pjsua2.fileio.RECORDER_latest = str(fname)[(len(str(self.__path ))+1):]
             try:
                 self.__recorder = pj.AudioMediaRecorder()
                 self.__recorder.createRecorder(str(fname))
@@ -235,6 +238,7 @@ class CallRecorder:
         """Stop an ongoing recording, if any"""
         if self.__recorder is not None:
             LOGGER.debug("Stopping call recorder")
+            RECORDER_latest = None
             self.__recorder = None
             # Force garbage collection to stop recording now, even if
             # the current interpreter does not use refcounting

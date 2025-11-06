@@ -46,8 +46,12 @@ class StatuslogAction(Action):
             snap_len = len(str(doorpi.INSTANCE.config["snapshots.directory"])) + len(str(doorpi.INSTANCE.base_path)) + 2
             snapfile = str(snapshot.SnapshotAction.list_all()[-1])[snap_len:]
             prefix = datetime.datetime.now().strftime("%Y.%m.%d %H:%M:%S")
+            rec = "none"
+            if doorpi.sipphone.from_pjsua2.fileio.RECORDER_latest != None:
+                rec = doorpi.sipphone.from_pjsua2.fileio.RECORDER_latest
+            LOGGER.info ("Rec=" + str(rec))
             with self.__filename.open("a") as f:
-                f.write(prefix+","+content+","+snapfile+"\n")
+                f.write(prefix+","+content+","+snapfile+","+rec+"\n")
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "[%s] Error fetching status information for file %s",
