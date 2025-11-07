@@ -49,6 +49,8 @@ class GPIOKeyboard(AbstractKeyboard):
                     + self._bouncetime.seconds
                 ),
             )
+            
+        self.destroyed = False
         output_pins = [int(i) for i in self._outputs.keys() if i.isdigit()]  # type: list[int]
         gpio.setup(output_pins, gpio.OUT)
         for output_pin in self._outputs:
@@ -58,6 +60,7 @@ class GPIOKeyboard(AbstractKeyboard):
     def destroy(self) -> None:
         global INSTANTIATED
 
+        self.destroyed = True
         for pin in self._outputs:
             self.output(pin, False)
         gpio.cleanup()
@@ -77,6 +80,8 @@ class GPIOKeyboard(AbstractKeyboard):
         return self._normalize(gpio.input(pin_id))
 
     def output(self, pin: str, value: Any) -> Literal[True]:
+        #pretend normal operation if triggered during shutdown
+        if self.destroyed: return True
         super().output(pin, value)
         pin_id = int(pin)
         value = self._normalize(value)
