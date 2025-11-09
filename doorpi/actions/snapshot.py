@@ -49,7 +49,7 @@ class SnapshotAction(Action):
             raise ValueError("snapshot_path must not be empty")
         #add year folder for snapshot
         #path = pathlib.Path(path)
-        year = datetime.datetime.now().strftime("%Y-%M")
+        year = datetime.datetime.now().strftime("%Y-%m")
         path = pathlib.Path(path, year)
         if not str(path.parent).startswith("/"):
             path = pathlib.Path(doorpi.INSTANCE.base_path, path)

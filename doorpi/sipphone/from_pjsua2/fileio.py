@@ -187,7 +187,7 @@ class CallRecorder:
             #create year folder if recordings are kept forever
             if self.__keep <= 0:
                 self.__pathyear = self.__path / datetime.datetime.now().strftime(
-                    "%Y-%M"
+                    "%Y-%m"
                 )
             else:
                 self.__pathyear = self.__path
