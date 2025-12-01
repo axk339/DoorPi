@@ -14,6 +14,8 @@ from . import EVENT_SOURCE, config, fire_event
 from .callbacks import AccountCallback, CallCallback
 from .fileio import CallRecorder, DialTonePlayer
 
+import gc
+
 if TYPE_CHECKING:  # pragma: no cover
     from . import glue
 
@@ -97,8 +99,44 @@ class Worker:
                 
         # --- NOTE: If you have active calls, they must be hung up and deleted here ---
         
+        # 2.1. *** KRITISCHER SCHRITT: AUDIO-KOMPONENTEN FREIGEBEN UND GC ERZWINGEN ***
+        LOGGER.info("Starting forced audio component cleanup.")
         
-        
+        # DialTonePlayer freigeben (behebt 'Destructor for player id=0 is not called')
+        if hasattr(self.__phone, 'dialtone') and self.__phone.dialtone is not None:
+            try:
+                # Wichtig: Zuerst Audio-Übertragung stoppen, falls aktiv
+                self.__phone.dialtone.stop()
+                
+                # Letzte Referenz auf das PJSIP-Player-Objekt entfernen
+                # Das löst __del__ aus, wenn GC oder Referenzzählung läuft
+                self.__phone.dialtone._player = None
+                
+                # Die Instanz des DialTonePlayer selbst freigeben
+                self.__phone.dialtone = None 
+                
+                LOGGER.info("DialTonePlayer internal PJSIP resources released.")
+            except Exception as e:
+                LOGGER.warning(f"Error while releasing DialTonePlayer resources: {e}")
+
+        # CallRecorder freigeben (derzeit nur self.__recorder = None im stop() aufgerufen)
+        if hasattr(self.__phone, 'recorder') and self.__phone.recorder is not None:
+            try:
+                # Ruft die stop()-Methode auf, die self.__recorder = None setzt
+                self.__phone.recorder.stop()
+                
+                # Die Instanz des CallRecorder selbst freigeben
+                self.__phone.recorder = None 
+                
+                LOGGER.info("CallRecorder internal PJSIP resources released.")
+            except Exception as e:
+                LOGGER.warning(f"Error while releasing CallRecorder resources: {e}")
+
+        # WICHTIG: Erzwungene Garbage Collection nach Freigabe der Referenzen
+        # Dadurch wird sichergestellt, dass die PJSIP-Destruktoren (__del__) sofort laufen.
+        LOGGER.info("Forcing garbage collection to ensure PJSIP media ports are closed.")
+        gc.collect()
+
         # 3. Wait for PJSIP to finish processing pending events (including UNREGISTER)
         LOGGER.info("Handling final PJSIP events to ensure clean unregistration...")
         
