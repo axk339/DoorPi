@@ -3,8 +3,11 @@ import threading
 from typing import Any, Mapping
 
 import doorpi
+import logging
 
 from . import Action
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OutAction(Action):
@@ -39,34 +42,58 @@ class TriggeredOutAction(OutAction):
         startval: str,
         stopval: str,
         holdtime: str,
+        waittime: str = 0,
+        loops: str = 1,
         intpin: str = None,
         /,
     ) -> None:
         super().__init__(pin, startval)
         self._stopval = stopval
-        self._holdtime = float(holdtime)
+        self._holdtime = float(holdtime)/1000
+        self._waittime = float(waittime)/1000
+        self._loops = int(loops)
         self._intpin = intpin
         self._int = threading.Event()
+        self._running = False
         if intpin:
             doorpi.INSTANCE.event_handler.register_action(
                 f"OnKeyDown_{intpin}", self.interrupt
             )
 
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
-        self._setpin(self._value)
-        self._int.clear()  # Make sure the flag is not set before waiting for it
-        self._int.wait(timeout=self._holdtime)
-        self._setpin(self._stopval)
+        count = self._loops
+        self._running = True
+        while count != 0:
+            LOGGER.info ("OUT: setpin, loops=" + str(count))
+            self._setpin(self._value)
+            self._int.clear()  # Make sure the flag is not set before waiting for it
+            if self._int.wait(timeout=self._holdtime):
+                count = 0      # Stop directly if interrupt fired
+            LOGGER.debug ("OUT: set stopval")
+            self._setpin(self._stopval)
+            if count != 0:
+                self._int.clear()  # Make sure the flag is not set before waiting for it
+                if self._int.wait(timeout=self._waittime):
+                    count = 0      # Stop directly if interrupt fired
+                if count > 0: count -= 1
+        self._running = False
+        LOGGER.info ("OUT: finished out loops")
 
     def interrupt(self, event_id: str, extra: Mapping[str, Any]) -> None:
         """Aborts the wait time, so that the pin will be reset immediately."""
         del event_id, extra
+        if self._running:
+            LOGGER.info ("OUT: interrupt")
+        else:
+            LOGGER.debug ("OUT: interrupt, but not running")
         self._int.set()
 
     def __str__(self) -> str:
         return (
             " ".join(
-                [f"Hold {self._pin} at {self._value} for {self._holdtime}s",
+                [f"Hold {self._pin} at {self._value} for {self._holdtime}ms",
+                 f"wait {self._waittime}ms" if (self._waittime > 0) else "",
+                 f"loop infinitly" if (self._loops < 0) else f"loop {self._loops} times",
                  f"or until {self._intpin} is pressed" if self._intpin else ""])
         )
 
@@ -80,6 +107,8 @@ class TriggeredOutAction(OutAction):
                         self._value,
                         self._stopval,
                         str(self._holdtime),
+                        str(self._waittime),
+                        str(self._loops),
                     )
                 ),
                 self._intpin or "",
