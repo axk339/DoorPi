@@ -4,6 +4,7 @@ from typing import Any, Mapping
 
 import doorpi
 import logging
+from threading import Thread
 
 from . import Action
 
@@ -61,6 +62,11 @@ class TriggeredOutAction(OutAction):
             )
 
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
+        thrf = Thread (target=self._run_callthread, args=[])
+        thrf.start()
+        LOGGER.info ("OUT: thread started")
+    
+    def _run_callthread(self) -> None:
         count = self._loops
         self._running = True
         while count != 0:
