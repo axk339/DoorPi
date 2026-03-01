@@ -16,10 +16,11 @@ LOGGER = logging.getLogger(__name__)
 
 import requests
 import time
-last_timeout_warning_time = 0
 
 def akuvoxDND (force, dnd_mute):
-	global last_timeout_warning_time
+	# Initialisierung: Nur beim allerersten Aufruf nach dem DoorPi-Start
+	if not hasattr(akuvoxDND, "last_warn"):
+		akuvoxDND.last_warn = 0
 	
 	getdnd = True		# get always status
 	if force:
@@ -90,11 +91,11 @@ def akuvoxDND (force, dnd_mute):
 			if dnd_mute:
 				with open(indfile, "w") as f:
 					f.write("mute")
-				LOGGER.debug ("# stored status 'mute' in " + str(indfile))
+				LOGGER.info ("# stored status 'mute' in " + str(indfile))
 			else:
 				with open(indfile, "w") as f:
 					f.write("unmute")
-				LOGGER.debug ("# stored status 'unmute' in " + str(indfile))
+				LOGGER.info ("# stored status 'unmute' in " + str(indfile))
 			
 			LOGGER.debug ("# new dnd status: " + ('1' if dnd_mute else '0'))
 		
@@ -134,24 +135,25 @@ def akuvoxDND (force, dnd_mute):
 	except requests.exceptions.Timeout:
 		current_time = time.time()
 		loggedWarning = False
-		if current_time - last_timeout_warning_time >= 3600:
-			LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
-			last_timeout_warning_time = current_time # Update the time of the last warning
+		if current_time - akuvoxDND.last_warn >= 3600:
+			LOGGER.warning("Akuvox monitor request timed out")
+			akuvoxDND.last_warn = current_time # Update the time of the last warning
 			loggedWarning = True
 		else:
-			LOGGER.debug("Akuvox monitor request timed out, defaulting to 'unmute' (warning suppressed for 1 hour)")
+			LOGGER.debug("Akuvox monitor request timed out (warning suppressed for 1 hour)")
 		try:
-			with open(indfile) as f:
-				content = f.readline()
-			if content != "unmute":
-				with open(indfile, "w") as f:
-					f.write("unmute")
-					if not loggedWarning:
-						LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
+			if setdnd:
+				if dnd_mute:
+					with open(indfile, "w") as f:
+						f.write("mute")
+					LOGGER.info ("# stored status 'mute' in " + str(indfile))
+				else:
+					with open(indfile, "w") as f:
+						f.write("unmute")
 					LOGGER.info ("# stored status 'unmute' in " + str(indfile))
+				
+				LOGGER.debug ("# new dnd status: " + ('1' if dnd_mute else '0'))
 		except:
-			if not loggedWarning:
-				LOGGER.warning("Akuvox monitor request timed out, defaulting to 'unmute'")
 			LOGGER.info ("# error processing file " + str(indfile))
 	
 	except requests.exceptions.RequestException as e:

@@ -6,6 +6,7 @@ import datetime
 import subprocess
 import logging
 import pathlib
+import threading
 from urllib.parse import urlparse
 from typing import Any, List, Mapping
 
@@ -16,6 +17,8 @@ from . import Action
 LOGGER = logging.getLogger(__name__)
 DOORPI_SECTION = "DoorPi"
 
+# Das zentrale Lock-Objekt
+_SNAP_LOCK = threading.Lock()
 
 class SnapshotAction(Action):
     """Base class for snapshotting actions."""
@@ -31,13 +34,15 @@ class SnapshotAction(Action):
         keep = doorpi.INSTANCE.config["snapshots.keep"]
         if keep == 0:
             return
-        files = cls.list_all()
-        for fi in files[0:-keep]:
-            try:
-                LOGGER.info("Deleting old snapshot %s", fi)
-                fi.unlink()
-            except OSError:
-                LOGGER.exception("Could not clean up snapshot %s", fi.name)
+        
+        with _SNAP_LOCK: # Verhindert, dass zwei Threads gleichzeitig löschen
+            files = cls.list_all()
+            for fi in files[0:-keep]:
+                try:
+                    LOGGER.info("Deleting old snapshot %s", fi)
+                    fi.unlink()
+                except OSError:
+                    LOGGER.exception("Could not clean up snapshot %s", fi.name)
 
     @staticmethod
     #def get_base_path() -> pathlib.Path:
@@ -93,14 +98,27 @@ class URLSnapshotAction(SnapshotAction):
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         import requests
 
-        try:
-            response = requests.get(self.__url, stream=True)
-            with self.get_next_path().open("wb") as output:
-                for chunk in response.iter_content(1048576):  # 1 MiB chunks
-                    output.write(chunk)
-        except Exception as e:
-            LOGGER.error(f"Can't make a snapshot: {str(e)}")
-
+        # Alles in einen Lock-Block fassen
+        with _SNAP_LOCK:
+            try:
+                target_path = self.get_next_path()
+                
+                # Überspringen, wenn Datei in dieser Sekunde schon da ist
+                if target_path.exists():
+                    LOGGER.info("Snapshot existiert bereits: %s", target_path.name)
+                    return
+                
+                response = requests.get(self.__url, stream=True, timeout=10)
+                response.raise_for_status()  # erzwingt Fehler > except bevor versucht wird eine leere Datei zu schreiben
+                
+                with target_path.open("wb") as output:
+                    for chunk in response.iter_content(1048576):
+                        output.write(chunk)
+                
+                LOGGER.info("Snapshot erfolgreich: %s", target_path.name)
+            except Exception as e:
+                LOGGER.error(f"Snapshot-Fehler: {str(e)}")
+                
         self.cleanup()
 
     def __str__(self) -> str:
