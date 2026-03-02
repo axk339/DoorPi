@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 import requests
 import time
 
-def akuvoxDND (force, dnd_mute):
+def akuvoxDND (force, dnd_mute, dnd_toggle, dnd_snyc):
 	# Initialisierung: Nur beim allerersten Aufruf nach dem DoorPi-Start
 	if not hasattr(akuvoxDND, "last_warn"):
 		akuvoxDND.last_warn = 0
@@ -33,6 +33,37 @@ def akuvoxDND (force, dnd_mute):
 	vol_level = 10
 	
 	indfile = doorpi.INSTANCE.config["akuvox.indfile"]
+	
+	# Read local value
+	if dnd_toggle or dnd_snyc:
+		try:
+			with open(indfile, "r") as f:
+				content = f.readline()
+		except:
+			content = ""
+		LOGGER.info("Reading " + str(indfile) + "=" + content)
+		# Toggle and return, no remote action to be quick
+		if dnd_toggle:
+			if content == "mute":
+				LOGGER.info ("# toggling, was muted, setting to unmute")
+				dnd_mute = False
+			else:
+				LOGGER.info ("# toggling, was not muted, setting to mute")
+				dnd_mute = True
+			if dnd_mute:
+				with open(indfile, "w") as f:
+					f.write("mute")
+				LOGGER.info ("# stored status 'mute' in " + str(indfile))
+			else:
+				with open(indfile, "w") as f:
+					f.write("unmute")
+				LOGGER.info ("# stored status 'unmute' in " + str(indfile))
+			return
+		# Read local value then process further
+		else:
+			dnd_mute = (content == "mute")
+			LOGGER.info ("# setting to read value mute=" + str(dnd_mute))
+	
 	akuvoxPasswordHash = doorpi.INSTANCE.config["akuvox.pwhash"]
 	url = 'http://' + doorpi.INSTANCE.config["akuvox.ip"] + '/web'
 	try:
@@ -66,6 +97,7 @@ def akuvoxDND (force, dnd_mute):
 			end_index = start_index + 1
 			dndstatus = response.text[start_index:end_index]
 			
+			#if currently not muted
 			if dndstatus == "0":
 				if setdnd and not dnd_mute:
 					setdnd = False
@@ -73,6 +105,7 @@ def akuvoxDND (force, dnd_mute):
 				with open(indfile, "w") as f:
 					f.write("unmute")
 				LOGGER.debug ("# stored status 'unmute' in " + str(indfile))
+			#if currently muted
 			else:
 				if setdnd and dnd_mute:
 					setdnd = False
@@ -143,6 +176,7 @@ def akuvoxDND (force, dnd_mute):
 			LOGGER.debug("Akuvox monitor request timed out (warning suppressed for 1 hour)")
 		try:
 			if setdnd:
+				if not loggedWarning: LOGGER.warning("Akuvox monitor request timed out")
 				if dnd_mute:
 					with open(indfile, "w") as f:
 						f.write("mute")
@@ -169,16 +203,32 @@ class AkuvoxAction(Action):
         if action == "setmute":
             self.__force = True
             self.__dnd_mute = True
+            self.__dnd_toggle = False
+            self.__dnd_sync = False
         elif action == "setunmute":
             self.__force = True
             self.__dnd_mute = False
+            self.__dnd_toggle = False
+            self.__dnd_sync = False
+        elif action == "tooglemute":
+            self.__force = True
+            self.__dnd_mute = True
+            self.__dnd_toggle = True
+            self.__dnd_sync = False
+        elif action == "syncmute":
+            self.__force = True
+            self.__dnd_mute = True
+            self.__dnd_toggle = False
+            self.__dnd_sync = True
         else:
             self.__force = False
             self.__dnd_mute = False
+            self.__dnd_toggle = False
+            self.__dnd_sync = False
     
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         try:
-            akuvoxDND (self.__force, self.__dnd_mute)
+            akuvoxDND (self.__force, self.__dnd_mute, self.__dnd_toggle, self.__dnd_sync)
         except Exception:  # pylint: disable=broad-except
             LOGGER.exception(
                 "[%s] Error contacting akuvox monitor: %s",

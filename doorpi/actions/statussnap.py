@@ -43,6 +43,13 @@ class StatussnapAction(Action):
                 with self.__filename.open("a") as f:
                     f.write(self.__content+",1\n")
                     f.flush()
+                
+                # Wir lesen sie sofort wieder ein, um den Stand im Log zu sehen
+                file_content = self.__filename.read_text(encoding="utf-8")
+                
+                # 3. Zeilenumbrüche ersetzen und ins DoorPi-Log schreiben
+                debug_content = file_content.replace('\n', '[n]').replace('\r', '')
+                LOGGER.info("[%s] Aktueller Inhalt von %s: %s", event_id, self.__filename.name, debug_content)
             except Exception:  # pylint: disable=broad-except
                 LOGGER.exception(
                     "[%s] Error fetching status information for file %s",
