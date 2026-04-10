@@ -81,7 +81,9 @@ def load() -> AbstractSIPPhone:
     try:
         entrypoint = next(
             i
-            for i in importlib.metadata.entry_points()["doorpi.sipphones"]
+            #for i in importlib.metadata.entry_points()["doorpi.sipphones"]
+            # Wechsel zu python 3.13
+            for i in importlib.metadata.entry_points().select(group="doorpi.sipphones")
             if i.name == sipphone_name
         )
     except StopIteration:

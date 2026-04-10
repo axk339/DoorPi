@@ -54,7 +54,9 @@ def from_string(confstr: str) -> Optional[Action]:
     try:
         entrypoint = next(
             i
-            for i in importlib.metadata.entry_points()["doorpi.actions"]
+            #for i in importlib.metadata.entry_points()["doorpi.actions"]
+            # Wechsel zu python 3.13
+            for i in importlib.metadata.entry_points().select(group="doorpi.actions")
             if i.name == atype
         )
     except StopIteration:

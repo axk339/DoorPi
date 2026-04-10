@@ -13,7 +13,9 @@ __all__ = [
 
 KeyboardType = enum.Enum(  # type: ignore[misc]
     "KeyboardType",
-    {i.name: i for i in importlib.metadata.entry_points()["doorpi.keyboards"]},
+    #{i.name: i for i in importlib.metadata.entry_points()["doorpi.keyboards"]},
+    # Wechsel zu python 3.13
+    {i.name: i for i in importlib.metadata.entry_points().select(group="doorpi.keyboards")},
     module=__name__,
 )
 
