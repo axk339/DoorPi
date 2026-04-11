@@ -38,23 +38,26 @@ class GPIOKeyboard(AbstractKeyboard):
 
         self._inputs = [int(i) for i in self._inputs if i.isdigit()]  # type: list[int]
         gpio.setup(self._inputs, gpio.IN, pull_up_down=pull)
+        # Wir nehmen die Sekunden (die eigentlich ms sein sollen) und wandeln sie direkt in den Integer für GPIO um.
+        temp = int(self._bouncetime.total_seconds())
         for input_pin in self._inputs:
-            LOGGER.debug("Registering input pin %s", input_pin)
+            LOGGER.info("Registering input pin %s, bouncetime %s", input_pin, str(temp))
             gpio.add_event_detect(
                 input_pin,
                 gpio.BOTH,
                 callback=self.event_detect,
-                bouncetime=(
-                    self._bouncetime.days * 3600 * 24
-                    + self._bouncetime.seconds
-                ),
+                #bouncetime=(
+                #    self._bouncetime.days * 3600 * 24
+                #    + self._bouncetime.seconds
+                #),
+                bouncetime=temp,
             )
             
         self.destroyed = False
         output_pins = [int(i) for i in self._outputs.keys() if i.isdigit()]  # type: list[int]
         gpio.setup(output_pins, gpio.OUT)
         for output_pin in self._outputs:
-            LOGGER.debug("Registering output pin %s", output_pin)
+            LOGGER.info("Registering output pin %s", output_pin)
             self.output(output_pin, False)
 
     def destroy(self) -> None:
