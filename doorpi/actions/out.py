@@ -56,6 +56,10 @@ class TriggeredOutAction(OutAction):
         self._intpin = intpin
         self._int = threading.Event()
         self._running = False
+        # ein globales Stop-Event für diesen Pin
+        doorpi.INSTANCE.event_handler.register_action(
+            f"StopOut_{pin}", self.interrupt
+        )
         if intpin:
             doorpi.INSTANCE.event_handler.register_action(
                 f"OnKeyDown_{intpin}", self.interrupt
