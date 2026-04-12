@@ -56,10 +56,17 @@ class TriggeredOutAction(OutAction):
         self._intpin = intpin
         self._int = threading.Event()
         self._running = False
+        
         # ein globales Stop-Event für diesen Pin
-        doorpi.INSTANCE.event_handler.register_action(
-            f"StopOut_{pin}", self.interrupt
-        )
+        stop_event = f"StopOut_{pin}"
+        # Das Event beim System bekannt machen:
+        if stop_event not in doorpi.INSTANCE.event_handler.events:
+            doorpi.INSTANCE.event_handler.register_event(stop_event, f"out_{pin}_logic")
+            LOGGER.info("OUT: Global stop-event registered: %s", stop_event)
+        # Und dann erst den Listener draufsetzen:
+        doorpi.INSTANCE.event_handler.register_action(stop_event, self.interrupt)
+        LOGGER.debug("OUT: Instance for pin %s hooked to %s", self._pin, stop_event)
+        
         if intpin:
             doorpi.INSTANCE.event_handler.register_action(
                 f"OnKeyDown_{intpin}", self.interrupt
