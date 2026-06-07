@@ -308,4 +308,5 @@ class Worker:
                             LOGGER.error("Error making a call: %s", err.info())
                         else:
                             self.__phone._ringing_calls += [call]
+                            LOGGER.info("Call ringing %s", uri)
             self.__phone._waiting_calls = []
