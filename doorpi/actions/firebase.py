@@ -32,8 +32,8 @@ def firebase_init():
         except Exception as e:
             LOGGER.info ("Firebase error: " + str(e))
 
-def send_topic_push(channel, requestPrio, timestamp, title, body, snapshot):
-    thrf = Thread (target=send_topic_push_thr, args=[channel, requestPrio, timestamp, title, body, snapshot])
+def send_topic_push(channel, requestPrio, timestamp, datestamp, title, body, snapshot):
+    thrf = Thread (target=send_topic_push_thr, args=[channel, requestPrio, timestamp, datestamp, title, body, snapshot])
     thrf.start()
     LOGGER.debug ("Firebase thread started")
     
