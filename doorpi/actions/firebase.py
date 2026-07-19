@@ -37,7 +37,7 @@ def send_topic_push(channel, requestPrio, timestamp, title, body, snapshot):
     thrf.start()
     LOGGER.debug ("Firebase thread started")
     
-def send_topic_push_thr(channel, requestPrio, timestamp, title, body, snapshot):
+def send_topic_push_thr(channel, requestPrio, timestamp, datestamp, title, body, snapshot):
     try:
         topic = channel
         prio = "normal"
@@ -52,6 +52,7 @@ def send_topic_push_thr(channel, requestPrio, timestamp, title, body, snapshot):
                     "body"      : body,
                     "snapshot"  : snapshot,
                     "timestamp" : timestamp,
+                    "datestamp" : datestamp,
                     "prio"      : requestPrio
                 },
             ),
@@ -75,8 +76,9 @@ class FirebaseAction(Action):
     def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
         snapfile = str(snapshot.SnapshotAction.list_all()[-1])[32:] 
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        datestamp = datetime.datetime.now().strftime("%Y%m%d")
         
-        send_topic_push(self.__topic, "normal", timestamp, self.__title, self.__content, snapfile)
+        send_topic_push(self.__topic, "normal", timestamp, datestamp, self.__title, self.__content, snapfile)
         
     def __str__(self) -> str:
         return f"Send firebase message '{self.__title}' > '{self.__content}' in topic {self.__topic}"
