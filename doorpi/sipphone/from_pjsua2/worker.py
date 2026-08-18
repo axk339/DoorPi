@@ -29,6 +29,7 @@ class Worker:
         self.__phone = sipphone
         self.__config = doorpi.INSTANCE.config.view("sipphone")
         self.hangup = False
+        self.hangupCall = ""
 
         LOGGER.info("Initializing native library")
         self.__ep = pj.Endpoint()
@@ -200,25 +201,63 @@ class Worker:
 
         with self.__phone._call_lock:
             prm = pj.CallOpParam()
-            self.__phone._waiting_calls = []
+            newRinging = []
 
+            # 1. Ringing Calls verarbeiten
             for call in self.__phone._ringing_calls:
                 try:
-                    call.hangup(prm)
+                    if not self.hangupCall:  # Deckt "" und None ab
+                        # Alle Anrufe auflegen
+                        call.hangup(prm)
+                        LOGGER.info ("Hung up ringing call: %s", ci.remoteUri)
+                    else:
+                        # Prüfen, ob die Zielnummer im remoteUri enthalten ist
+                        ci = call.getInfo()
+                        LOGGER.debug ("Checking which call to hangup: %s, ringing %s", self.hangupCall, ci.remoteUri)
+                        if self.hangupCall == ci.remoteUri:
+                            call.hangup(prm)
+                            LOGGER.info ("Hung up ringing call: %s", ci.remoteUri)
+                        else:
+                            # Nicht betroffener Anruf bleibt in der Ringing-Liste
+                            newRinging.append(call)
                 except pj.Error as err:
                     if err.reason.endswith("(PJSIP_ESESSIONTERMINATED)"):
                         continue
-                    LOGGER.exception(
-                        "Error hanging up a call: %s (ignored)", err.reason
-                    )
-            self.__phone._ringing_calls = []
+                    LOGGER.exception("Error hanging up a call: %s (ignored)", err.reason)
+            
+            self.__phone._ringing_calls = newRinging
 
+            # Waiting Calls nur leeren, wenn ALLE aufgelegt werden sollen
+            if not self.hangupCall:
+                self.__phone._waiting_calls = []
+
+            # 2. Aktiven Hauptanruf (current_call) verarbeiten
             if self.__phone.current_call is not None:
-                self.__phone.current_call.hangup(prm)
+                try:
+                    should_hangup = False
+                    if not self.hangupCall:
+                        should_hangup = True
+                    else:
+                        ci = self.__phone.current_call.getInfo()
+                        if self.hangupCall in ci.remoteUri:
+                            should_hangup = True
+
+                    if should_hangup:
+                        self.__phone.current_call.hangup(prm)
+                        LOGGER.info ("Hung up current call to %s", ci.remoteUri)
+                except pj.Error as err:
+                    if not err.reason.endswith("(PJSIP_ESESSIONTERMINATED)"):
+                        LOGGER.exception(
+                            "Error hanging up current call: %s (ignored)", err.reason
+                        )
             else:
-                # Synthesize a disconnect event
-                fire_event("OnCallDisconnect", remote_uri="sip:null@null")
+                # Disconnect Event nur auslösen, wenn ungefiltert alle aufgelegt wurden
+                if not self.hangupCall:
+                    fire_event("OnCallDisconnect", remote_uri="sip:null@null")
+
+            # Reset der Steuervariablen
             self.hangup = False
+            self.hangupCall = ""  # Zurücksetzen für den nächsten Aufruf
 
     def checkCallTime(self) -> None:
         """Check all current calls and enforce call time restrictions"""

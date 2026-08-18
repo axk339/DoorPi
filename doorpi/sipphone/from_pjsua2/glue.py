@@ -143,6 +143,14 @@ class Pjsua2(AbstractSIPPhone):
         LOGGER.trace("Hanging up all calls")
         assert self._worker is not None
         with self._call_lock:
+            self._worker.hangupCall = ""
+            self._worker.hangup = True
+
+    def hangupCall(self, call: str) -> None:
+        LOGGER.trace("Hanging up call " + call)
+        assert self._worker is not None
+        with self._call_lock:
+            self._worker.hangupCall = call
             self._worker.hangup = True
 
     def is_admin(self, uri: str) -> bool:

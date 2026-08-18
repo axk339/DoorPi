@@ -75,3 +75,31 @@ class HangupAction(Action):
 
     def __repr__(self) -> str:
         return "hangup:"
+
+
+class HangupCallAction(Action):
+    """Hangs up specific ongoing calls."""
+
+    def __init__(self, call: str, waittime: str = "0") -> None:
+        super().__init__()
+        self.__waittime = float(waittime)
+        self.__call = call
+
+    def __call__(self, event_id: str, extra: Mapping[str, Any]) -> None:
+        if self.__waittime:
+            LOGGER.info(
+                "[%s] Hanging up call %s in %s seconds",
+                event_id,
+                self.__call,
+                self.__waittime,
+            )
+            time.sleep(self.__waittime)
+
+        LOGGER.info("[%s] Hanging up call %s", self.__call, event_id)
+        doorpi.INSTANCE.sipphone.hangupCall(self.__call)
+
+    def __str__(self) -> str:
+        return f"Hang up call {self.__call}"
+
+    def __repr__(self) -> str:
+        return f"hangup:{self.__call}"
